@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Five Minutes</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Five Minutes">
+<meta name="theme-color" content="#26241F">
+<link rel="manifest" href='data:application/manifest+json,{"name":"Five Minutes","short_name":"Five Min","start_url":".","display":"standalone","background_color":"%23EDE7DA","theme_color":"%2326241F","icons":[{"src":"data:image/svg%2Bxml,%253Csvg xmlns%253D%2527http://www.w3.org/2000/svg%2527 viewBox%253D%25270 0 512 512%2527%253E%253Crect width%253D%2527512%2527 height%253D%2527512%2527 fill%253D%2527%2523EDE7DA%2527/%253E%253Ctext x%253D%2527256%2527 y%253D%2527350%2527 font-size%253D%2527300%2527 text-anchor%253D%2527middle%2527 fill%253D%2527%252326241F%2527%253E5%253C/text%253E%253C/svg%253E","sizes":"512x512","type":"image/svg+xml","purpose":"any"}]}'>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23EDE7DA'/%3E%3Ctext x='50' y='68' font-size='60' text-anchor='middle' fill='%2326241F'%3E5%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Mukta:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Two skins. Day is the warm-paper original; dusk is its plum-shadowed twin.
+     Every colour below is a variable so the switch is a single attribute flip. */
+  :root, [data-skin="day"]{
+    --paper:#EDE7DA; --paper-2:#E3DCCB; --ink:#26241F; --ink-soft:#5B5748;
+    --moss:#5C6B47; --moss-deep:#414D33; --plum:#4A3B52; --plum-deep:#332839;
+    --gold:#A6803D; --hairline:rgba(38,36,31,0.14);
+    --field-bg:#FFFFFF; --on-accent:#EDE7DA;
+    --block-morning:#F3EEE3; --block-evening:#E8E2E6;
+    --block-morning-edge:rgba(166,128,61,0.28); --block-evening-edge:rgba(74,59,82,0.24);
+    --ribbon-a:#A6803D; --ribbon-b:#8a6a2f; --morning-tag:#8a6a2f;
+    --status:#26241F;
+  }
+  [data-skin="dusk"]{
+    --paper:#211D26; --paper-2:#2B2632; --ink:#EDE7DA; --ink-soft:#A79EAB;
+    --moss:#7E9161; --moss-deep:#4A5A38; --plum:#C1A6CE; --plum-deep:#4E3F59;
+    --gold:#D2AC68; --hairline:rgba(237,231,218,0.16);
+    --field-bg:#191620; --on-accent:#F2ECE0;
+    --block-morning:#282230; --block-evening:#2E2639;
+    --block-morning-edge:rgba(210,172,104,0.30); --block-evening-edge:rgba(193,166,206,0.26);
+    --ribbon-a:#D2AC68; --ribbon-b:#A07E3E; --morning-tag:#D2AC68;
+    --status:#211D26;
+  }
+  body, .app, .field input[type=text], .field textarea, #searchBox, .entry-card,
+  .couplet, .block, .tool-btn, .pill, .backup-nudge{
+    transition: background-color .45s ease, color .45s ease, border-color .45s ease;
+  }
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important;} }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--paper); color:var(--ink); font-family:'Mukta',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; -webkit-font-smoothing:antialiased; min-height:100vh; display:flex; justify-content:center; padding:0 0 48px;}
+  .app{width:100%; max-width:480px; min-height:100vh; background:var(--paper); position:relative; display:flex; flex-direction:column;}
+
+  .ribbon{position:absolute; top:0; right:22px; width:34px; background:linear-gradient(180deg, var(--ribbon-a), var(--ribbon-b)); color:var(--on-accent); text-align:center; padding:10px 0 16px; font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.04em; clip-path:polygon(0 0,100% 0,100% 100%,50% 84%,0 100%); box-shadow:0 3px 8px rgba(0,0,0,0.18); z-index:5; line-height:1.5;}
+  .ribbon b{display:block; font-size:17px; font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-weight:600;}
+
+  header{padding:26px 24px 0;}
+  .eyebrow{font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-soft); margin:0 0 6px;}
+  h1{font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-weight:600; font-size:26px; margin:0; letter-spacing:-0.01em;}
+
+  .datebar{display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--hairline); gap:8px;}
+  .datebar button.nav{appearance:none; border:1px solid var(--hairline); background:var(--paper-2); border-radius:8px; width:36px; height:36px; font-size:16px; cursor:pointer; color:var(--ink); flex-shrink:0;}
+  .datebar button.nav:disabled{opacity:0.3; cursor:default;}
+  .datebar button.nav:focus-visible{outline:2px solid var(--gold);}
+  .date-center{text-align:center; flex:1; cursor:pointer;}
+  .date-center .dow{font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:10.5px; color:var(--ink-soft); letter-spacing:0.08em; text-transform:uppercase;}
+  .date-center .dnum{font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-weight:600; font-size:17px;}
+  #dateInput{position:absolute; opacity:0; width:1px; height:1px; pointer-events:none;}
+
+  .toprow{display:flex; padding:14px 24px 0; gap:8px;}
+  .pill{appearance:none; border:1px solid var(--hairline); background:none; border-radius:20px; padding:6px 13px; font-size:12px; font-family:'Mukta',system-ui,sans-serif; font-weight:600; color:var(--ink-soft); cursor:pointer;}
+  .pill.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+
+  main{flex:1; padding:20px 24px 40px;}
+  .locked{text-align:center; padding:70px 20px; color:var(--ink-soft);}
+  .locked .glyph{font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-size:30px; color:var(--gold); margin-bottom:10px;}
+  .locked p{font-size:13.5px; line-height:1.5; max-width:260px; margin:0 auto;}
+
+  .couplet{background:var(--paper-2); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:14px 16px; margin-bottom:20px;}
+  .couplet.eve{border-left-color:var(--plum);}
+  .couplet .roman{font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-style:italic; font-size:15px; line-height:1.55; color:var(--ink); margin:0 0 8px;}
+  .couplet .gloss{font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 8px;}
+  .couplet .poet{font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:10.5px; letter-spacing:0.05em; text-transform:uppercase; color:var(--gold); margin:0;}
+  .couplet.eve .poet{color:var(--plum);}
+
+  .section-tag{display:flex; align-items:center; gap:8px; font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; margin:0 0 14px;}
+  .section-tag .dot{width:7px; height:7px; border-radius:50%;}
+  .morning .dot{background:var(--gold);} .evening .dot{background:var(--plum);}
+  .section-tag.morning{color:var(--morning-tag);} .section-tag.evening{color:var(--plum);}
+
+  .prompt{font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-style:italic; font-size:16px; color:var(--ink); margin:0 0 10px; line-height:1.35;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:6px; font-weight:500;}
+  .field input[type=text], .field textarea{width:100%; background:var(--field-bg); border:1px solid var(--hairline); border-radius:8px; padding:11px 12px; font-family:'Mukta',system-ui,sans-serif; font-size:14.5px; color:var(--ink); resize:none; line-height:1.4;}
+  .field input:disabled, .field textarea:disabled{background:var(--paper-2); color:var(--ink-soft);}
+  .field input[type=text]:focus, .field textarea:focus{outline:none; border-color:var(--gold);}
+  .field.affirmation input{font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-style:italic; font-size:15px;}
+  .field.evening input:focus, .field.evening textarea:focus{border-color:var(--plum);}
+  .affirm-scaffold{font-size:11.5px; color:var(--ink-soft); background:var(--paper-2); border-radius:8px; padding:9px 11px; margin-bottom:8px; line-height:1.5;}
+  .affirm-scaffold b{color:var(--morning-tag); font-weight:700;}
+
+  .g-row{display:flex; align-items:center; gap:10px;}
+  .g-row .num{font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:12px; color:var(--ink-soft); width:14px;}
+
+  hr.divider{border:none; border-top:1px solid var(--hairline); margin:28px 0 22px;}
+
+  .save-bar{margin-top:6px;}
+  button.save{width:100%; padding:13px; border:none; border-radius:9px; font-family:'Mukta',system-ui,sans-serif; font-weight:600; font-size:14px; cursor:pointer; color:var(--on-accent);}
+  button.save:active{transform:scale(0.98);}
+  button.save.morning-btn{background:var(--moss-deep);}
+  button.save.evening-btn{background:var(--plum-deep);}
+  .saved-flag{text-align:center; font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:11px; color:var(--moss-deep); margin-top:8px; opacity:0; transition:opacity .2s ease;}
+  .saved-flag.show{opacity:1;}
+
+  /* Browse list */
+  .entry-card{border:1px solid var(--hairline); border-radius:10px; padding:16px; margin-bottom:14px; background:var(--paper-2); cursor:pointer;}
+  .entry-card .edate{font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:11px; color:var(--ink-soft); margin-bottom:10px;}
+  .entry-block{margin-bottom:10px;} .entry-block:last-child{margin-bottom:0;}
+  .entry-block .label{font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--morning-tag); font-weight:600; margin-bottom:4px;}
+  .entry-block.eve .label{color:var(--plum);}
+  .entry-block ul{margin:0; padding-left:18px;} .entry-block li{font-size:13.5px; line-height:1.5; margin-bottom:2px;}
+  .entry-block .single{font-size:13.5px; line-height:1.5; font-style:italic; font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif;}
+  .empty{text-align:center; padding:60px 20px; color:var(--ink-soft);}
+  .empty .glyph{font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-size:34px; margin-bottom:10px; color:var(--gold);}
+  .empty p{font-size:13.5px; line-height:1.5; max-width:280px; margin:0 auto;}
+
+  footer.hint{text-align:center; font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:10.5px; color:var(--ink-soft); opacity:0.6; padding:26px 24px 0; line-height:1.6;}
+
+  /* ---- app-feel: native-ish touch behaviour ---- */
+  html{-webkit-text-size-adjust:100%;}
+  body{overscroll-behavior-y:contain; -webkit-tap-highlight-color:transparent;}
+  .app{padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom);}
+  button, .pill, .nav{-webkit-tap-highlight-color:transparent; touch-action:manipulation;}
+  .nav, .pill, button.save, .tool-btn{min-height:38px;}
+
+  /* ---- storage health banner: makes silent data loss loud ---- */
+  .storage-alert{display:none; background:#7A2E2E; color:#F6EFE4; padding:12px 16px; font-size:12.5px; line-height:1.55;}
+  .storage-alert.show{display:block;}
+  .storage-alert b{display:block; font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-size:14px; margin-bottom:4px;}
+
+  /* ---- backup / data tools ---- */
+  .toolbar{display:flex; gap:8px; padding:0 24px 4px; flex-wrap:wrap;}
+  .tool-btn{appearance:none; border:1px solid var(--hairline); background:var(--paper-2); border-radius:8px; padding:8px 12px; font-family:'Mukta',system-ui,sans-serif; font-size:12px; font-weight:600; color:var(--ink-soft); cursor:pointer;}
+  .tool-btn.primary{background:var(--moss-deep); color:var(--on-accent); border-color:var(--moss-deep);}
+  .backup-nudge{margin:0 24px 14px; background:var(--paper-2); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:11px 13px; font-size:12px; line-height:1.55; color:var(--ink-soft); display:none;}
+  .backup-nudge.show{display:block;}
+  #importFile{display:none;}
+
+  /* ---- browse: filter + delete ---- */
+  .browse-tools{margin-bottom:14px;}
+  #searchBox{width:100%; background:var(--field-bg); border:1px solid var(--hairline); border-radius:8px; padding:10px 12px; font-family:'Mukta',system-ui,sans-serif; font-size:14px; color:var(--ink);}
+  #searchBox:focus{outline:none; border-color:var(--gold);}
+  .entry-card{position:relative;}
+  .card-del{position:absolute; top:10px; right:10px; appearance:none; border:1px solid var(--hairline); background:var(--paper); border-radius:6px; width:28px; height:28px; font-size:13px; line-height:1; color:var(--ink-soft); cursor:pointer;}
+
+  /* ---- morning / evening as distinct panels, not just accent colours ---- */
+  .block{border-radius:12px; padding:16px 15px 14px; margin-bottom:6px; border:1px solid transparent;}
+  .block.morning-block{background:var(--block-morning); border-color:var(--block-morning-edge);}
+  .block.evening-block{background:var(--block-evening); border-color:var(--block-evening-edge);}
+  .block .couplet{background:transparent; border-left-width:3px; padding-left:13px; border-radius:0;}
+  .block .section-tag{margin-bottom:12px;}
+
+  /* ---- skin toggle ---- */
+  .skin-btn{display:flex; align-items:center; gap:6px;}
+  .skin-btn .glyph{font-size:13px; line-height:1;}
+
+  .autosave-note{text-align:center; font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:10.5px; color:var(--ink-soft); opacity:0.75; margin:4px 0 0;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="storage-alert" id="storageAlert">
+    <b>This device is not saving your entries.</b>
+    Browser storage is unavailable here — most likely because this file was opened directly from the Files app. Anything you type will be lost when you close the tab. Serve this file over https (or add it to your Home screen from a hosted URL) before relying on it.
+  </div>
+
+  <div class="ribbon" id="ribbon"><b id="streakNum">0</b>DAY<br>STREAK</div>
+
+  <header>
+    <p class="eyebrow">Daily Practice</p>
+    <h1>Five Minutes</h1>
+  </header>
+
+  <div class="datebar">
+    <button class="nav" id="prevDay" aria-label="Previous day">&larr;</button>
+    <div class="date-center" id="dateCenter">
+      <div class="dow" id="dowLabel"></div>
+      <div class="dnum" id="dnumLabel"></div>
+      <input type="date" id="dateInput">
+    </div>
+    <button class="nav" id="nextDay" aria-label="Next day">&rarr;</button>
+  </div>
+
+  <div class="toprow">
+    <button class="pill active" id="pillEntry">Entry</button>
+    <button class="pill" id="pillBrowse">Browse all</button>
+  </div>
+
+  <div class="toolbar">
+    <button class="tool-btn" id="btnExport">Back up</button>
+    <button class="tool-btn" id="btnExportMd">Export as text</button>
+    <button class="tool-btn" id="btnImport">Restore</button>
+    <button class="tool-btn skin-btn" id="btnSkin" aria-live="polite"><span class="glyph" id="skinGlyph">&#9788;</span><span id="skinLabel">Auto</span></button>
+    <input type="file" id="importFile" accept="application/json,.json">
+  </div>
+  <div class="backup-nudge" id="backupNudge"></div>
+
+  <main>
+    <section id="view-entry">
+      <div id="entryLocked" style="display:none;" class="locked">
+        <div class="glyph">&mdash;</div>
+        <p>This day hasn't arrived yet. Come back when it does.</p>
+      </div>
+
+      <div id="entryContent">
+        <div class="block morning-block">
+        <div class="section-tag morning"><span class="dot"></span>Morning &middot; 2 minutes</div>
+        <div class="couplet" id="coupletMorning"></div>
+
+        <p class="prompt">I am grateful for&hellip;</p>
+        <div class="field"><div class="g-row"><span class="num">1</span><input type="text" id="g1" maxlength="140" placeholder="A person, moment, or thing"></div></div>
+        <div class="field"><div class="g-row"><span class="num">2</span><input type="text" id="g2" maxlength="140" placeholder="A person, moment, or thing"></div></div>
+        <div class="field"><div class="g-row"><span class="num">3</span><input type="text" id="g3" maxlength="140" placeholder="A person, moment, or thing"></div></div>
+
+        <p class="prompt" style="margin-top:20px;">What would make today great?</p>
+        <div class="field"><div class="g-row"><span class="num">1</span><input type="text" id="i1" maxlength="140" placeholder="One concrete, actionable thing"></div></div>
+        <div class="field"><div class="g-row"><span class="num">2</span><input type="text" id="i2" maxlength="140" placeholder="One concrete, actionable thing"></div></div>
+        <div class="field"><div class="g-row"><span class="num">3</span><input type="text" id="i3" maxlength="140" placeholder="One concrete, actionable thing"></div></div>
+
+        <p class="prompt" style="margin-top:20px;">Daily affirmation</p>
+        <div class="affirm-scaffold" id="affirmScaffold"></div>
+        <div class="field affirmation"><input type="text" id="affirm" maxlength="140" placeholder="I am&hellip;"></div>
+
+        <div class="save-bar">
+          <button class="save morning-btn" id="saveMorning">Save morning entry</button>
+          <p class="saved-flag" id="flagMorning">Saved.</p>
+          <p class="autosave-note">Autosaves as you type.</p>
+        </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="block evening-block">
+        <div class="section-tag evening"><span class="dot"></span>Evening &middot; 2 minutes</div>
+        <div class="couplet eve" id="coupletEvening"></div>
+
+        <p class="prompt">3 amazing things that happened today&hellip;</p>
+        <div class="field"><div class="g-row"><span class="num">1</span><input type="text" id="h1" maxlength="140" placeholder="A highlight"></div></div>
+        <div class="field"><div class="g-row"><span class="num">2</span><input type="text" id="h2" maxlength="140" placeholder="A highlight"></div></div>
+        <div class="field"><div class="g-row"><span class="num">3</span><input type="text" id="h3" maxlength="140" placeholder="A highlight"></div></div>
+
+        <p class="prompt" style="margin-top:20px;">How could today have been better?</p>
+        <div class="field evening"><textarea id="improve" rows="3" maxlength="280" placeholder="One honest reflection"></textarea></div>
+
+        <div class="save-bar">
+          <button class="save evening-btn" id="saveEvening">Save evening entry</button>
+          <p class="saved-flag" id="flagEvening">Saved.</p>
+          <p class="autosave-note">Autosaves as you type.</p>
+        </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-browse" style="display:none;">
+      <div class="browse-tools"><input type="search" id="searchBox" placeholder="Search your entries…" autocomplete="off"></div>
+      <div id="browseList"></div>
+    </section>
+
+  </main>
+
+  <footer class="hint">Stored in this browser on this device only — nothing leaves your phone.<br>Browser storage can be cleared by the browser itself. Back up regularly.</footer>
+</div>
+
+<script>
+(function(){
+  const STORE_KEY = 'fiveMinuteJournal.entries.v2';
+
+  // ---------- curated public-domain couplet bank ----------
+  // Roman transliteration + original short English gloss (not reproducing any single
+  // published translation). Classical poets only (pre-1938), by design.
+  const BANK = [
+    {roman:"bazeecha-e-atfal hai duniya mere aage / hota hai shab-o-roz tamasha mere aage", gloss:"The world unfolds before me like a child's playground — one more spectacle, every day and night.", poet:"Mirza Ghalib", theme:"morning"},
+    {roman:"khudi ko kar buland itna ke har taqdeer se pehle / khuda bande se khud pooche bata teri raza kya hai", gloss:"Raise your inner self so high that before any fate is written, God Himself asks what you desire.", poet:"Allama Iqbal", theme:"morning"},
+    {roman:"sitaron se aage jahan aur bhi hain / abhi ishq ke imtihan aur bhi hain", gloss:"Beyond the stars lie other worlds still — there are more trials of love yet to come.", poet:"Allama Iqbal", theme:"morning"},
+    {roman:"laayi hayat aaye qaza le chali chale / apni khushi na aaye na apni khushi chale", gloss:"Life brought me here, death will lead me away — I came by no wish of my own, nor will I leave by one.", poet:"Zauq", theme:"morning"},
+    {roman:"na tu zameen ke liye hai na aasman ke liye / jahan hai tere liye tu nahi jahan ke liye", gloss:"You belong to neither earth nor sky — the world exists for you, not you for it.", poet:"Allama Iqbal", theme:"morning"},
+    {roman:"apni duniya aap paida kar agar zindon mein hai", gloss:"If you are among the living, build a world of your own.", poet:"Allama Iqbal", theme:"morning"},
+    {roman:"yaqeen mohkam, amal paiham, mohabbat fateh-e-alam / jihad-e-zindagani mein hain ye mardon ki shamsheeren", gloss:"Firm conviction, ceaseless effort, and a love that can win over the world — these are what carry a person through the struggle of living.", poet:"Allama Iqbal", theme:"morning"},
+    {roman:"ghulami mein na kaam aati hain shamsheeren na tadbeeren / jo ho zauq-e-yaqin paida to kat jaati hain zanjeeren", gloss:"In bondage, neither swords nor schemes help — but once real conviction takes root, even chains give way.", poet:"Allama Iqbal", theme:"morning"},
+    {roman:"tundi-e-baad-e-mukhalif se na ghabra ae uqaab / ye to chalti hai tujhe uncha udaane ke liye", gloss:"Don't fear the fierceness of the headwind, o eagle — it only blows to lift you higher.", poet:"Allama Iqbal", theme:"morning"},
+    {roman:"parwaz hai dono ki isi ek fiza mein / kargas ka jahan aur hai, shaheen ka jahan aur", gloss:"Both fly through the very same sky — but the vulture's world and the eagle's world are not the same.", poet:"Allama Iqbal", theme:"morning"},
+    {roman:"fard qaim rabt-e-millat se hai, tanha kuchh nahi / mauj hai darya mein aur, birun-e-darya kuchh nahi", gloss:"The individual holds together through their bond with others — alone, they are nothing, as a wave is only a wave within the river.", poet:"Allama Iqbal", theme:"morning"},
+
+    // ---- Hindu scripture additions: paraphrased renderings of well-documented themes, ancient public-domain sources ----
+    {roman:"Let a person lift themselves by their own mind; let them not degrade themselves — the mind alone is both the friend and the enemy of the self.", gloss:"A rendering of Bhagavad Gita, chapter 6, verse 5.", poet:"after the Bhagavad Gita", theme:"morning"},
+    {roman:"Better one's own path, imperfectly walked, than another's followed to perfection.", gloss:"A rendering of Bhagavad Gita, chapter 3, verse 35.", poet:"after the Bhagavad Gita", theme:"morning"},
+    {roman:"Contact with the world brings heat and cold, pleasure and pain — these come and go, and must be learned to be endured.", gloss:"A rendering of Bhagavad Gita, chapter 2, verse 14.", poet:"after the Bhagavad Gita", theme:"morning"},
+    {roman:"Perform your work with a steady mind, letting go of attachment to success or failure — this evenness of mind is itself a discipline.", gloss:"A rendering of Bhagavad Gita, chapter 2, verse 48.", poet:"after the Bhagavad Gita", theme:"morning"},
+    {roman:"Lead me from the unreal to the real, from darkness to light, from death to immortality.", gloss:"A rendering of a well-known invocation from the Brihadaranyaka Upanishad.", poet:"after the Brihadaranyaka Upanishad", theme:"morning"},
+    {roman:"Let noble thoughts come to us from every side.", gloss:"A rendering of a Rig Vedic verse (1.89.1).", poet:"after the Rig Veda", theme:"morning"},
+
+    // ---- classical Chinese and Japanese additions ----
+    {roman:"The year's cold, then we know the pine and the cypress are the last to lose their leaves.", gloss:"", poet:"Confucius, Analects IX.28 (trans. James Legge, 1861 — public domain)", theme:"morning"},
+    {roman:"Is it not pleasant to learn with a constant perseverance and application?", gloss:"", poet:"Confucius, Analects I.1 (trans. James Legge, 1861 — public domain)", theme:"morning"},
+    {roman:"The great man is he who does not lose his child's-heart.", gloss:"", poet:"Mencius IV.B.12 (trans. James Legge \u2014 public domain)", theme:"morning"},
+    {roman:"The highest good is like water, which benefits all things without contention.", gloss:"A rendering of Tao Te Ching, chapter 8.", poet:"after Lao Tzu", theme:"morning"},
+    {roman:"My daily activity is nothing unusual \u2014 I simply remain in harmony with it. My supernatural power and marvellous activity: drawing water and carrying firewood.", gloss:"The documented Tang-dynasty source of the sentiment later circulated as \u2018chop wood, carry water\u2019.", poet:"Layman Pang (Pang Yun, d. 808)", theme:"morning"},
+    {roman:"Yanagi ni yukiore nashi \u2014 no snow ever breaks the willow.", gloss:"A documented Japanese proverb (\u67f3\u306b\u96ea\u6298\u308c\u306a\u3057): what yields survives the weight that snaps what stands rigid.", poet:"Japanese proverb", theme:"morning"},
+    {roman:"The wise cultivate what is within them, not what depends on the world outside.", gloss:"A rendering of a recurring theme in the Inner Chapters.", poet:"after Zhuangzi", theme:"morning"},
+
+    // ---- cross-cultural morning additions: canonical public-domain sources only ----
+    {roman:"Trust thyself: every heart vibrates to that iron string.", gloss:"", poet:"Ralph Waldo Emerson, Self-Reliance (1841)", theme:"morning"},
+    {roman:"If one advances confidently in the direction of his dreams, and endeavors to live the life which he has imagined, he will meet with a success unexpected in common hours.", gloss:"", poet:"Henry David Thoreau, Walden (1854)", theme:"morning"},
+    {roman:"Not I, nor anyone else can travel that road for you. You must travel it for yourself.", gloss:"", poet:"Walt Whitman, Song of the Open Road (1856)", theme:"morning"},
+    {roman:"To strive, to seek, to find, and not to yield.", gloss:"", poet:"Alfred, Lord Tennyson, Ulysses (1842)", theme:"morning"},
+    {roman:"I am the master of my fate, I am the captain of my soul.", gloss:"", poet:"William Ernest Henley, Invictus (1888)", theme:"morning"},
+    {roman:"Well done is better than well said.", gloss:"", poet:"Benjamin Franklin, Poor Richard's Almanack", theme:"morning"},
+    {roman:"If there is no struggle, there is no progress.", gloss:"", poet:"Frederick Douglass, 1857", theme:"morning"},
+    {roman:"If you can meet with triumph and disaster and treat those two impostors just the same.", gloss:"", poet:"Rudyard Kipling, If— (1910)", theme:"morning"},
+    {roman:"The heights by great men reached and kept were not attained by sudden flight; but they, while their companions slept, were toiling upward in the night.", gloss:"", poet:"Henry Wadsworth Longfellow, The Ladder of St. Augustine", theme:"morning"},
+    {roman:"Out of suffering have emerged the strongest souls; the most massive characters are seamed with scars.", gloss:"Widely misattributed to Kahlil Gibran; the documented source is Chapin, quoted in Gilbert's Dictionary of Burning Words of Brilliant Writers (1895).", poet:"Edwin Hubbell Chapin (1814\u20131880)", theme:"morning"},
+    {roman:"What blocks the path can itself become the path forward.", gloss:"A rendering of a recurring theme in the Meditations.", poet:"after Marcus Aurelius", theme:"morning"},
+    {roman:"Circumstances don't make the person; they reveal the person to themselves.", gloss:"A rendering of a recurring theme in the Discourses.", poet:"after Epictetus", theme:"morning"},
+    {roman:"We are not given a short life, but we make it short by how carelessly we spend it.", gloss:"A rendering of a line from On the Shortness of Life.", poet:"after Seneca", theme:"morning"},
+    {roman:"To have faults and not to reform them \u2014 this, indeed, should be pronounced having faults.", gloss:"", poet:"Confucius, Analects XV.29 (trans. James Legge \u2014 public domain)", theme:"morning"},
+    {roman:"A tower nine stories high begins with a mound of earth; a journey of a thousand miles begins under one's feet.", gloss:"A rendering of Tao Te Ching, chapter 64.", poet:"after Lao Tzu", theme:"morning"},
+    {roman:"Let yourself be drawn by what you truly love; it will not lead you astray.", gloss:"A rendering of a recurring Masnavi theme.", poet:"after Rumi", theme:"morning"},
+    {roman:"Each day of life is itself a journey, and to keep moving is, in its own way, to be home.", gloss:"A rendering from the opening of Oku no Hosomichi.", poet:"after Matsuo Basho", theme:"morning"},
+    {roman:"Success is to be measured not so much by the position one has reached, as by the obstacles overcome while trying to succeed.", gloss:"", poet:"Booker T. Washington", theme:"morning"},
+    {roman:"Although the world is full of suffering, it is also full of the overcoming of it.", gloss:"", poet:"Helen Keller, Optimism (1903)", theme:"morning"},
+    {roman:"Far better it is to dare mighty things, to win glorious triumphs, even though checkered by failure, than to rank with those poor spirits who neither enjoy much nor suffer much.", gloss:"", poet:"Theodore Roosevelt, 1899", theme:"morning"},
+    {roman:"Always bear in mind that your own resolution to succeed is more important than any other one thing.", gloss:"", poet:"Abraham Lincoln, letter, 1848", theme:"morning"},
+    {roman:"While there's life, there's hope.", gloss:"", poet:"Cicero, Letters to Atticus", theme:"morning"},
+    {roman:"If we had no winter, the spring would not be so pleasant.", gloss:"", poet:"Anne Bradstreet, Meditations Divine and Moral", theme:"morning"},
+    {roman:"Hope is the thing with feathers that perches in the soul.", gloss:"", poet:"Emily Dickinson", theme:"morning"},
+    {roman:"The mind is its own place, and in itself can make a heaven of hell, a hell of heaven.", gloss:"", poet:"John Milton, Paradise Lost", theme:"morning"},
+    {roman:"That best portion of a good man's life, his little, nameless, unremembered acts of kindness and of love.", gloss:"", poet:"William Wordsworth, Tintern Abbey (1798)", theme:"morning"},
+    {roman:"However long the night, the dawn will break.", gloss:"", poet:"traditional African proverb", theme:"morning"},
+    {roman:"Fall down seven times, stand up eight.", gloss:"", poet:"traditional Japanese proverb", theme:"morning"},
+
+    {roman:"hazaron khwahishen aisi ke har khwahish pe dam nikle / bahut nikle mere armaan lekin phir bhi kam nikle", gloss:"A thousand desires, each fierce enough to take my breath — many came true, yet still it wasn't enough.", poet:"Mirza Ghalib", theme:"evening"},
+    {roman:"patta patta boota boota haal hamara jaane hai / jaane na jaane gul hi na jaane baagh to saara jaane hai", gloss:"Every leaf and shoot in this garden knows my state — even if the rose doesn't, the whole garden does.", poet:"Mir Taqi Mir", theme:"evening"},
+    {roman:"tum mere paas hote ho goya / jab koi doosra nahi hota", gloss:"You are beside me, it seems, whenever no one else is.", poet:"Momin Khan Momin", theme:"evening"},
+    {roman:"lagta nahi hai dil mera ujray dayar mein / kis ki bani hai aalam-e-na-paidar mein", gloss:"My heart finds no peace in this ruined place — whose fortune has ever lasted in this fleeting world?", poet:"Bahadur Shah Zafar", theme:"evening"},
+    {roman:"ishq par zor nahi hai ye woh aatish ghalib / ke lagaye na lage aur bujhaye na bane", gloss:"Love cannot be commanded — a fire that won't catch when lit, nor die when put out.", poet:"Mirza Ghalib", theme:"evening"},
+    {roman:"koi ummeed bar nahi aati / koi surat nazar nahi aati", gloss:"No hope comes to fruition, no way forward is in sight.", poet:"Mirza Ghalib", theme:"evening"},
+    {roman:"ulti ho gayin sab tadbeeren kuchh na dawa ne kaam kiya / dekha is beemari-e-dil ne aakhir kaam tamam kiya", gloss:"Every remedy backfired, no cure worked — this sickness of the heart finally had its way.", poet:"Mir Taqi Mir", theme:"evening"},
+    {roman:"rone se aur ishq mein bebaak ho gaye / dhoye gaye hum aise ke bas paak ho gaye", gloss:"Weeping made me bolder in love — I was washed so clean that I became pure.", poet:"Mirza Ghalib", theme:"evening"},
+    {roman:"dil hi to hai na sang-o-khisht dard se bhar na aaye kyun / royenge hum hazaar baar koi humein sataye kyun", gloss:"It is only a heart, not stone or brick — why shouldn't it fill with pain? I may weep a thousand times, but why let it be at anyone's hand?", poet:"Mirza Ghalib", theme:"evening"},
+    {roman:"qaid-e-hayat o band-e-gham asl mein donon ek hain / maut se pehle aadmi gham se nijaat paaye kyun", gloss:"Life's confinement and grief's bond are, at root, one and the same — why should a person expect release from sorrow before death itself?", poet:"Mirza Ghalib", theme:"evening"},
+    {roman:"hum ko maloom hai jannat ki haqeeqat lekin / dil ke khush rakhne ko ghalib ye khayal achha hai", gloss:"I know well enough what paradise really is — but Ghalib, it's still a good thought to keep the heart content.", poet:"Mirza Ghalib", theme:"evening"},
+    {roman:"woh jo hum mein tum mein qaraar tha, tumhein yaad ho ke na yaad ho / wohi yaani vaada nibaah ka, tumhein yaad ho ke na yaad ho", gloss:"That understanding between us — whether you remember it or not — that promise we made to see it through, whether you remember it or not.", poet:"Momin Khan Momin", theme:"evening"},
+    {roman:"na tha kuchh to khuda tha, kuchh na hota to khuda hota / duboya mujhko hone ne, na hota main to kya hota", gloss:"When nothing existed, God was there; had nothing remained, God would still be there — it was my own existing that undid me; had I not been, what would it have mattered?", poet:"Mirza Ghalib", theme:"evening"},
+    {roman:"dil-e-nadaan tujhe hua kya hai / aakhir is dard ki dawa kya hai", gloss:"O foolish heart, what has become of you? What, after all, is the cure for this pain?", poet:"Mirza Ghalib", theme:"evening"},
+    {roman:"ye na thi hamari qismat ke visal-e-yaar hota / agar aur jeete rehte yehi intezaar hota", gloss:"It was not in my fate to be united with the one I love — had I lived longer still, this same waiting would have continued.", poet:"Mirza Ghalib", theme:"evening"},
+    {roman:"baske dushwar hai har kaam ka aasan hona / aadmi ko bhi mayassar nahi insaan hona", gloss:"Since it is hard for anything at all to come easily, even becoming a true human being is not within everyone's reach.", poet:"Mirza Ghalib", theme:"evening"},
+    {roman:"ibtida-e-ishq hai roega kya / aage aage dekhiye hota hai kya", gloss:"This is only the beginning of love — why weep already? Let's see, as it unfolds, what becomes of it.", poet:"Mir Taqi Mir", theme:"evening"},
+
+    // ---- Hindu scripture additions: paraphrased renderings of well-documented themes, ancient public-domain sources ----
+    {roman:"As a person puts on new garments, giving up those worn out, the soul similarly accepts new forms, giving up those worn out.", gloss:"A rendering of Bhagavad Gita, chapter 2, verse 22.", poet:"after the Bhagavad Gita", theme:"evening"},
+    {roman:"This ancient one is not born, nor does it ever die; unborn, eternal, everlasting, it is not slain when the body is slain.", gloss:"A rendering of a theme from the Katha Upanishad.", poet:"after the Katha Upanishad", theme:"evening"},
+    {roman:"That is whole, this is whole; from wholeness, wholeness emerges. Take wholeness from wholeness, and wholeness still remains.", gloss:"A rendering of the invocation to the Isha Upanishad.", poet:"after the Isha Upanishad", theme:"evening"},
+    {roman:"Two birds, close companions, cling to the same tree. One eats the sweet fruit; the other looks on without eating.", gloss:"A rendering of a well-known image from the Mundaka Upanishad.", poet:"after the Mundaka Upanishad", theme:"evening"},
+    {roman:"One who bears no ill will, who is a friend to all beings, free of the sense of 'mine,' and even-tempered in pain and pleasure — such a person is dear.", gloss:"A rendering of Bhagavad Gita, chapter 12, verses 13–14.", poet:"after the Bhagavad Gita", theme:"evening"},
+
+    // ---- classical Chinese and Japanese additions ----
+    {roman:"When we see men of worth, we should think of equaling them; when we see men of a contrary character, we should turn inwards and examine ourselves.", gloss:"", poet:"Confucius, Analects IV.17 (trans. James Legge, 1861 — public domain)", theme:"evening"},
+    {roman:"Is there one word which may serve as a rule of practice for all one's life? Is not reciprocity such a word?", gloss:"", poet:"Confucius, Analects XV.23 (trans. James Legge, 1861 — public domain)", theme:"evening"},
+    {roman:"The rigid and hard will be broken; the soft and pliable will endure.", gloss:"A rendering of Tao Te Ching, chapter 76.", poet:"after Lao Tzu", theme:"evening"},
+    {roman:"Flow with whatever may happen, and let the mind be free; accept what cannot be avoided — this is the height of virtue.", gloss:"A rendering of a recurring theme in the Inner Chapters.", poet:"after Zhuangzi", theme:"evening"},
+    {roman:"An old pond, and the sound of a frog leaping into the water.", gloss:"A rendering of Basho's most well-known haiku.", poet:"after Matsuo Basho", theme:"evening"},
+    {roman:"In this world we walk on the roof of hell, gazing at flowers.", gloss:"A rendering of a well-known haiku.", poet:"after Kobayashi Issa", theme:"evening"},
+    {roman:"Empty mountains, no one in sight — yet I hear the echo of far-off voices.", gloss:"A rendering of the opening of Deer Enclosure.", poet:"after Wang Wei", theme:"evening"},
+
+    // ---- cross-cultural evening additions: canonical public-domain sources only ----
+    {roman:"To every thing there is a season, and a time to every purpose under the heaven.", gloss:"", poet:"Ecclesiastes 3:1 (KJV)", theme:"evening"},
+    {roman:"Better is the end of a thing than the beginning thereof.", gloss:"", poet:"Ecclesiastes 7:8 (KJV)", theme:"evening"},
+    {roman:"Weeping may endure for a night, but joy cometh in the morning.", gloss:"", poet:"Psalm 30:5 (KJV)", theme:"evening"},
+    {roman:"The thing that hath been, it is that which shall be; and there is no new thing under the sun.", gloss:"", poet:"Ecclesiastes 1:9 (KJV)", theme:"evening"},
+    {roman:"A soft answer turneth away wrath, but grievous words stir up anger.", gloss:"", poet:"Proverbs 15:1 (KJV)", theme:"evening"},
+    {roman:"Does the road wind up-hill all the way? Yes, to the very end.", gloss:"", poet:"Christina Rossetti, Up-Hill (1858)", theme:"evening"},
+    {roman:"After great pain, a formal feeling comes.", gloss:"", poet:"Emily Dickinson", theme:"evening"},
+    {roman:"The soul selects her own society, then shuts the door.", gloss:"", poet:"Emily Dickinson", theme:"evening"},
+    {roman:"The woods are lovely, dark and deep, but I have promises to keep.", gloss:"", poet:"Robert Frost, Stopping by Woods on a Snowy Evening (1923)", theme:"evening"},
+    {roman:"I am large, I contain multitudes.", gloss:"", poet:"Walt Whitman, Song of Myself", theme:"evening"},
+    {roman:"There is no need to rush toward answers — let the questions themselves keep you company a while longer.", gloss:"A rendering of a passage from Letters to a Young Poet.", poet:"after Rainer Maria Rilke", theme:"evening"},
+    {roman:"Every night, before I close my eyes, I ask myself: what weakness did I overcome today, what did I do better?", gloss:"A rendering of a passage from De Ira.", poet:"after Seneca", theme:"evening"},
+    {roman:"Do not indulge in dreams of having what you have not, but reckon up the chief of the blessings you own.", gloss:"A rendering of a passage from the Meditations.", poet:"after Marcus Aurelius", theme:"evening"},
+    {roman:"Every evening I examine myself on three points: whether I may have been unfaithful in transacting business for others, insincere with friends, or failed to practice what I have learned.", gloss:"", poet:"Confucius, Analects I.4 (trans. James Legge, 1861 — public domain)", theme:"evening"},
+    {roman:"You have a right to your actions, but never to the fruit of your actions.", gloss:"A rendering of Bhagavad Gita, chapter 2.", poet:"after the Bhagavad Gita", theme:"evening"},
+    {roman:"Knowing others is wisdom; knowing yourself is enlightenment.", gloss:"A rendering of Tao Te Ching, chapter 33.", poet:"after Lao Tzu", theme:"evening"},
+    {roman:"The old pond \u2014 a frog leaps in, and the water finds its sound.", gloss:"An original rendering of Basho's furuike ya; the familiar \u2018temple bell\u2019 version in circulation is Robert Bly's 1971 translation and is still in copyright.", poet:"after Matsuo Basho", theme:"evening"},
+    {roman:"We are such stuff as dreams are made on, and our little life is rounded with a sleep.", gloss:"", poet:"William Shakespeare, The Tempest", theme:"evening"},
+    {roman:"The day is done, and the darkness falls from the wings of night.", gloss:"", poet:"Henry Wadsworth Longfellow, The Day is Done", theme:"evening"},
+    {roman:"Midway upon the journey of our life I found myself within a forest dark, for the straightforward pathway had been lost.", gloss:"", poet:"Dante, Inferno (trans. Longfellow, 1867 — public domain)", theme:"evening"},
+    {roman:"Your pain is the breaking of the shell that encloses your understanding.", gloss:"", poet:"Kahlil Gibran, The Prophet (1923)", theme:"evening"},
+    {roman:"Men are disturbed not by the things which happen, but by their opinions about the things.", gloss:"", poet:"Epictetus, Enchiridion", theme:"evening"},
+    {roman:"Take away thy opinion, and then there is taken away the complaint. Take away the complaint, and the hurt is gone.", gloss:"The widely circulated \u2018everything we hear is an opinion\u2019 line is not in the Meditations; this is the closest thing Marcus actually wrote (IV.7).", poet:"Marcus Aurelius, Meditations IV.7 (trans. George Long, 1862 \u2014 public domain)", theme:"evening"},
+    {roman:"May you have the hindsight to know where you've been, the foresight to know where you're going, and the insight to know when you've gone too far.", gloss:"", poet:"traditional Irish blessing", theme:"evening"}
+  ];
+
+  const POOLS = {
+    morning: BANK.filter(c=>c.theme==='morning'),
+    evening: BANK.filter(c=>c.theme==='evening')
+  };
+  function poolFor(theme){ return POOLS[theme] || []; }
+
+  // Small deterministic PRNG (mulberry32) — same seed always yields the same stream.
+  function rng(seed){
+    let a = seed >>> 0;
+    return function(){
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function hashStr(str){
+    let h = 2166136261 >>> 0;
+    for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    return h >>> 0;
+  }
+
+  // SHUFFLE BAG, not hash-modulo. A date-hash mod N repeats early and covers the pool
+  // unevenly — some entries surface three times a year, others never. Instead we deal
+  // the whole pool as a deterministically shuffled deck: every entry appears exactly
+  // once before any entry repeats, and the same date always yields the same entry.
+  const permCache = {};
+  function permutation(theme, cycle){
+    const key = theme + ':' + cycle;
+    if(permCache[key]) return permCache[key];
+    const n = poolFor(theme).length;
+    const idx = Array.from({length:n}, (_,i)=>i);
+    const rand = rng(hashStr(theme + '|cycle|' + cycle));
+    for(let i=n-1;i>0;i--){
+      const j = Math.floor(rand() * (i+1));
+      const t = idx[i]; idx[i] = idx[j]; idx[j] = t;
+    }
+    // Guard the seam between decks. Without this, an entry can land near the end of
+    // one deck and near the start of the next, resurfacing days apart. Excluding the
+    // previous deck's last K from the new deck's first K forces a gap of at least K+1.
+    if(cycle > 0 && n > 8){
+      const K = Math.floor(n / 4);
+      const prevTail = permutation(theme, cycle - 1).slice(-K);
+      for(let i=0;i<K;i++){
+        if(prevTail.indexOf(idx[i]) === -1) continue;
+        for(let j=n-1;j>=K;j--){
+          if(prevTail.indexOf(idx[j]) === -1){
+            const t = idx[i]; idx[i] = idx[j]; idx[j] = t;
+            break;
+          }
+        }
+      }
+    }
+    permCache[key] = idx;
+    return idx;
+  }
+  // Whole days since epoch, computed in UTC so daylight-saving shifts can't skew it.
+  function dayIndex(dateKey){
+    const [y,m,d] = dateKey.split('-').map(Number);
+    return Math.floor(Date.UTC(y, m-1, d) / 86400000);
+  }
+  function coupletFor(dateKey, theme){
+    const pool = poolFor(theme);
+    const n = pool.length;
+    if(n === 0) return null;
+    const di = dayIndex(dateKey);
+    const cycle = Math.floor(di / n);
+    const pos = ((di % n) + n) % n;
+    return pool[permutation(theme, cycle)[pos]];
+  }
+
+  // ---------- affirmation scaffold, rotating by day index ----------
+  const DOMAINS = [
+    {name:"Fitness", stem:"I am someone who\u2026", ex:["shows up, even on the days I don't feel like it.", "is rebuilding strength one session at a time."]},
+    {name:"Career", stem:"I am someone who\u2026", ex:["is building toward something, even mid-transition.", "makes deliberate moves, not reactive ones."]},
+    {name:"Relationship", stem:"I am someone who\u2026", ex:["chooses patience over being right.", "shows up fully, not just when it's easy."]},
+    {name:"Wellbeing", stem:"I am\u2026", ex:["allowed to feel proud of small, steady progress.", "learning to sit with things without rushing to fix them."]}
+  ];
+  function affirmationScaffold(dateKey){
+    const days = Math.floor(new Date(dateKey+'T00:00:00').getTime()/86400000);
+    const d = DOMAINS[((days % 4) + 4) % 4];
+    return '<b>'+d.name+' focus</b> — try: "'+d.stem+' '+d.ex[0]+'" or "'+d.stem+' '+d.ex[1]+'"';
+  }
+
+  // ---------- date helpers ----------
+  function keyOf(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function todayKey(){ return keyOf(new Date()); }
+  function parseKey(k){ const [y,m,d] = k.split('-').map(Number); return new Date(y,m-1,d); }
+  function fmtDow(k){ return parseKey(k).toLocaleDateString(undefined,{weekday:'long'}); }
+  function fmtLong(k){ return parseKey(k).toLocaleDateString(undefined,{month:'long', day:'numeric', year:'numeric'}); }
+  function addDays(k, n){ const d = parseKey(k); d.setDate(d.getDate()+n); return keyOf(d); }
+
+  // ---------- storage layer with an explicit health check ----------
+  // localStorage behaviour is undefined for file: origins per spec, and Android's
+  // Files app hands Chrome a content:// URI where writes silently no-op. A journal
+  // that appears to save and doesn't is worse than one that refuses to. So: probe
+  // on boot, and if the probe fails, say so loudly instead of pretending.
+  const BACKUP_KEY = 'fiveMinuteJournal.lastBackup.v1';
+  let storageOK = false;
+  try{
+    const probe = '__fmj_probe__';
+    localStorage.setItem(probe, '1');
+    storageOK = localStorage.getItem(probe) === '1';
+    localStorage.removeItem(probe);
+  }catch(e){ storageOK = false; }
+
+  let data = {};
+  if(storageOK){
+    try{ data = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ data = {}; }
+  }
+
+  let persistFailed = false;
+  function persist(){
+    if(!storageOK){ showStorageAlert(); return; }
+    try{
+      localStorage.setItem(STORE_KEY, JSON.stringify(data));
+      persistFailed = false;
+    }catch(e){
+      persistFailed = true;
+      showStorageAlert('Save failed \u2014 storage may be full. Back up now and clear space.');
+      console.error(e);
+    }
+  }
+  function showStorageAlert(msg){
+    const el = document.getElementById('storageAlert');
+    if(msg) el.innerHTML = '<b>Your entry was not saved.</b>' + msg;
+    el.classList.add('show');
+  }
+  if(!storageOK) showStorageAlert();
+
+  let currentKey = todayKey();
+
+  // ---------- render entry page ----------
+  const els = {};
+  ['g1','g2','g3','i1','i2','i3','affirm','h1','h2','h3','improve'].forEach(id=>els[id]=document.getElementById(id));
+
+  function renderDateBar(){
+    document.getElementById('dowLabel').textContent = fmtDow(currentKey);
+    document.getElementById('dnumLabel').textContent = fmtLong(currentKey);
+    document.getElementById('nextDay').disabled = (currentKey >= todayKey());
+  }
+
+  function renderCouplets(){
+    const m = coupletFor(currentKey, 'morning');
+    const e = coupletFor(currentKey, 'evening');
+    const mEl = document.getElementById('coupletMorning');
+    const eEl = document.getElementById('coupletEvening');
+    const build = (c) => c ? ('<p class="roman">'+esc(c.roman)+'</p>'+(c.gloss?('<p class="gloss">'+esc(c.gloss)+'</p>'):'')+'<p class="poet">'+esc(c.poet)+'</p>') : '';
+    mEl.innerHTML = build(m);
+    eEl.innerHTML = build(e);
+  }
+
+  function renderEntry(){
+    renderDateBar();
+    const isFuture = currentKey > todayKey();
+    document.getElementById('entryLocked').style.display = isFuture ? 'block' : 'none';
+    document.getElementById('entryContent').style.display = isFuture ? 'none' : 'block';
+    if(isFuture) return;
+
+    renderCouplets();
+    document.getElementById('affirmScaffold').innerHTML = affirmationScaffold(currentKey);
+
+    const t = data[currentKey] || {};
+    els.g1.value = t.morning?.gratitude?.[0] || '';
+    els.g2.value = t.morning?.gratitude?.[1] || '';
+    els.g3.value = t.morning?.gratitude?.[2] || '';
+    els.i1.value = t.morning?.intentions?.[0] || '';
+    els.i2.value = t.morning?.intentions?.[1] || '';
+    els.i3.value = t.morning?.intentions?.[2] || '';
+    els.affirm.value = t.morning?.affirmation || '';
+    els.h1.value = t.evening?.highlights?.[0] || '';
+    els.h2.value = t.evening?.highlights?.[1] || '';
+    els.h3.value = t.evening?.highlights?.[2] || '';
+    els.improve.value = t.evening?.improve || '';
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function flash(el){ el.classList.add('show'); setTimeout(()=>el.classList.remove('show'), 2400); }
+
+  // ---------- capture + autosave ----------
+  // The Save buttons stay, because pressing one is the ritual full stop on a journal
+  // entry. But they are no longer load-bearing: on mobile the tab can be evicted at
+  // any moment, so we also write through on a short debounce.
+  const nonEmpty = a => Array.isArray(a) && a.some(x => x && x.trim());
+
+  function captureMorning(){
+    return {
+      gratitude:[els.g1.value.trim(), els.g2.value.trim(), els.g3.value.trim()],
+      intentions:[els.i1.value.trim(), els.i2.value.trim(), els.i3.value.trim()],
+      affirmation: els.affirm.value.trim()
+    };
+  }
+  function captureEvening(){
+    return {
+      highlights:[els.h1.value.trim(), els.h2.value.trim(), els.h3.value.trim()],
+      improve: els.improve.value.trim()
+    };
+  }
+  function sectionHasContent(sec){
+    if(!sec) return false;
+    return nonEmpty(sec.gratitude) || nonEmpty(sec.intentions) || (sec.affirmation||'').trim()
+        || nonEmpty(sec.highlights) || (sec.improve||'').trim();
+  }
+  function entryHasContent(entry){
+    return !!entry && (sectionHasContent(entry.morning) || sectionHasContent(entry.evening));
+  }
+
+  function commit(section){
+    if(currentKey > todayKey()) return;
+    const sec = section === 'morning' ? captureMorning() : captureEvening();
+    const filled = sectionHasContent(sec);
+    if(!filled && !(data[currentKey] && data[currentKey][section])) return; // don't create empty shells
+    if(!data[currentKey]) data[currentKey] = {};
+    if(filled){
+      sec.savedAt = new Date().toISOString();
+      data[currentKey][section] = sec;
+    }else{
+      delete data[currentKey][section];               // fields cleared out = entry withdrawn
+      if(!Object.keys(data[currentKey]).length) delete data[currentKey];
+    }
+    persist(); updateStreak(); updateNudge();
+  }
+  function commitAll(){ commit('morning'); commit('evening'); }
+
+  let autosaveTimer = null;
+  function scheduleAutosave(section){
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(()=>commit(section), 500);
+  }
+  const MORNING_FIELDS = ['g1','g2','g3','i1','i2','i3','affirm'];
+  const EVENING_FIELDS = ['h1','h2','h3','improve'];
+  MORNING_FIELDS.forEach(id=>els[id].addEventListener('input', ()=>scheduleAutosave('morning')));
+  EVENING_FIELDS.forEach(id=>els[id].addEventListener('input', ()=>scheduleAutosave('evening')));
+  // Belt and braces: flush before the page is torn down or backgrounded.
+  window.addEventListener('pagehide', commitAll);
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden) commitAll(); });
+
+  document.getElementById('saveMorning').addEventListener('click', ()=>{
+    clearTimeout(autosaveTimer); commit('morning'); flash(document.getElementById('flagMorning'));
+  });
+  document.getElementById('saveEvening').addEventListener('click', ()=>{
+    clearTimeout(autosaveTimer); commit('evening'); flash(document.getElementById('flagEvening'));
+  });
+
+  // A streak should mean you wrote something, not that you tapped Save on a blank page.
+  function updateStreak(){
+    let streak = 0; let k = todayKey();
+    for(let i=0;i<400;i++){
+      if(entryHasContent(data[k])){ streak++; k = addDays(k,-1); }
+      else if(k === todayKey()){ k = addDays(k,-1); }
+      else break;
+    }
+    document.getElementById('streakNum').textContent = streak;
+  }
+
+  // ---------- navigation ----------
+  document.getElementById('prevDay').addEventListener('click', ()=>{
+    clearTimeout(autosaveTimer); commitAll();
+    currentKey = addDays(currentKey,-1); renderEntry();
+  });
+  document.getElementById('nextDay').addEventListener('click', ()=>{
+    if(currentKey < todayKey()){
+      clearTimeout(autosaveTimer); commitAll();
+      currentKey = addDays(currentKey,1); renderEntry();
+    }
+  });
+  const dateInput = document.getElementById('dateInput');
+  document.getElementById('dateCenter').addEventListener('click', ()=>{
+    dateInput.value = currentKey;
+    dateInput.max = todayKey();
+    if(dateInput.showPicker){ try{ dateInput.showPicker(); }catch(e){ dateInput.click(); } }
+    else dateInput.click();
+  });
+  dateInput.addEventListener('change', ()=>{
+    if(dateInput.value){
+      clearTimeout(autosaveTimer); commitAll();
+      currentKey = dateInput.value > todayKey() ? todayKey() : dateInput.value; renderEntry();
+    }
+  });
+
+  // ---------- tabs: entry / browse / add ----------
+  const pillEntry = document.getElementById('pillEntry');
+  const pillBrowse = document.getElementById('pillBrowse');
+  const viewEntry = document.getElementById('view-entry');
+  const viewBrowse = document.getElementById('view-browse');
+
+  function showView(name){
+    [pillEntry,pillBrowse].forEach(p=>p.classList.remove('active'));
+    [viewEntry,viewBrowse].forEach(v=>v.style.display='none');
+    if(name==='entry'){ pillEntry.classList.add('active'); viewEntry.style.display='block'; renderEntry(); }
+    if(name==='browse'){ pillBrowse.classList.add('active'); viewBrowse.style.display='block'; renderBrowse(); }
+  }
+  pillEntry.addEventListener('click', ()=>showView('entry'));
+  pillBrowse.addEventListener('click', ()=>{ clearTimeout(autosaveTimer); commitAll(); showView('browse'); });
+
+  const searchBox = document.getElementById('searchBox');
+  searchBox.addEventListener('input', renderBrowse);
+
+  function entryText(t){
+    const parts = [];
+    if(t.morning){ parts.push((t.morning.gratitude||[]).join(' '), (t.morning.intentions||[]).join(' '), t.morning.affirmation||''); }
+    if(t.evening){ parts.push((t.evening.highlights||[]).join(' '), t.evening.improve||''); }
+    return parts.join(' ').toLowerCase();
+  }
+
+  function renderBrowse(){
+    const el = document.getElementById('browseList');
+    const q = (searchBox.value||'').trim().toLowerCase();
+    let keys = Object.keys(data).filter(k=>entryHasContent(data[k])).sort().reverse();
+    if(q) keys = keys.filter(k => entryText(data[k]).includes(q) || fmtLong(k).toLowerCase().includes(q));
+    if(keys.length===0){
+      el.innerHTML = q
+        ? '<div class="empty"><div class="glyph">&mdash;</div><p>Nothing matches that search.</p></div>'
+        : '<div class="empty"><div class="glyph">&mdash;</div><p>No entries yet. Your first morning page will appear here once saved.</p></div>';
+      return;
+    }
+    el.innerHTML = keys.map(k=>{
+      const t = data[k];
+      let block = '<div class="entry-card" data-key="'+k+'"><button class="card-del" data-del="'+k+'" aria-label="Delete this entry">&times;</button><div class="edate">'+fmtDow(k)+', '+fmtLong(k)+'</div>';
+      if(t.morning){
+        const g = (t.morning.gratitude||[]).filter(Boolean);
+        if(g.length) block += '<div class="entry-block"><div class="label">Grateful for</div><ul>'+g.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>';
+        if(t.morning.affirmation) block += '<div class="entry-block"><div class="label">Affirmation</div><div class="single">'+esc(t.morning.affirmation)+'</div></div>';
+      }
+      if(t.evening){
+        const h = (t.evening.highlights||[]).filter(Boolean);
+        if(h.length) block += '<div class="entry-block eve"><div class="label">Highlights</div><ul>'+h.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>';
+        if(t.evening.improve) block += '<div class="entry-block eve"><div class="label">Could improve</div><div class="single">'+esc(t.evening.improve)+'</div></div>';
+      }
+      block += '</div>';
+      return block;
+    }).join('');
+    el.querySelectorAll('.entry-card').forEach(card=>{
+      card.addEventListener('click', ()=>{ currentKey = card.dataset.key; showView('entry'); });
+    });
+    el.querySelectorAll('.card-del').forEach(btn=>{
+      btn.addEventListener('click', ev=>{
+        ev.stopPropagation();
+        const k = btn.dataset.del;
+        if(confirm('Delete the entry for ' + fmtLong(k) + '? This cannot be undone.')){
+          delete data[k]; persist(); updateStreak(); updateNudge(); renderBrowse();
+        }
+      });
+    });
+  }
+
+  // ---------- backup / restore ----------
+  // The original build had no way to get data out. On a device where the browser
+  // owns the only copy, that makes every entry hostage to a cache clear.
+  function saveAs(filename, text, mime){
+    const type = mime || 'text/plain;charset=utf-8';
+    // On Android the share sheet is the shortest path into Drive: one tap, no
+    // Downloads-folder detour and no manual move afterwards.
+    try{
+      const file = new File([text], filename, {type});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share({files:[file], title:'Five Minutes backup'}).catch(()=>{});
+        return true;
+      }
+    }catch(e){ /* no share support — fall through */ }
+    try{
+      const blob = new Blob([text], {type});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1500);
+      return true;
+    }catch(e){ console.error(e); alert('Could not write the file on this device. Open Browse, select all, and copy your entries out manually.'); return false; }
+  }
+  const download = saveAs;
+  function stamp(){ return todayKey(); }
+
+  function markBackedUp(){
+    try{ localStorage.setItem(BACKUP_KEY, JSON.stringify({at: new Date().toISOString(), count: countEntries()})); }catch(e){}
+    updateNudge();
+  }
+  function countEntries(){ return Object.keys(data).filter(k=>entryHasContent(data[k])).length; }
+
+  document.getElementById('btnExport').addEventListener('click', ()=>{
+    clearTimeout(autosaveTimer); commitAll();
+    const payload = {app:'five-minutes', schema:2, exportedAt:new Date().toISOString(), entries:data};
+    if(download('five-minutes-backup-'+stamp()+'.json', JSON.stringify(payload, null, 2), 'application/json')) markBackedUp();
+  });
+
+  document.getElementById('btnExportMd').addEventListener('click', ()=>{
+    clearTimeout(autosaveTimer); commitAll();
+    const keys = Object.keys(data).filter(k=>entryHasContent(data[k])).sort();
+    const lines = ['# Five Minutes \u2014 journal export', '', 'Exported ' + fmtLong(todayKey()) + '  \u00b7  ' + keys.length + ' entries', ''];
+    keys.forEach(k=>{
+      const t = data[k];
+      lines.push('## ' + fmtDow(k) + ', ' + fmtLong(k), '');
+      if(t.morning){
+        const g = (t.morning.gratitude||[]).filter(Boolean);
+        const i = (t.morning.intentions||[]).filter(Boolean);
+        if(g.length){ lines.push('**Grateful for**'); g.forEach(x=>lines.push('- ' + x)); lines.push(''); }
+        if(i.length){ lines.push('**What would make today great**'); i.forEach(x=>lines.push('- ' + x)); lines.push(''); }
+        if(t.morning.affirmation) lines.push('**Affirmation** \u2014 *' + t.morning.affirmation + '*', '');
+      }
+      if(t.evening){
+        const h = (t.evening.highlights||[]).filter(Boolean);
+        if(h.length){ lines.push('**Highlights**'); h.forEach(x=>lines.push('- ' + x)); lines.push(''); }
+        if(t.evening.improve) lines.push('**Could have been better** \u2014 ' + t.evening.improve, '');
+      }
+      lines.push('---', '');
+    });
+    download('five-minutes-journal-'+stamp()+'.md', lines.join('\n'), 'text/markdown;charset=utf-8');
+  });
+
+  const importFile = document.getElementById('importFile');
+  document.getElementById('btnImport').addEventListener('click', ()=>importFile.click());
+  importFile.addEventListener('change', ()=>{
+    const f = importFile.files && importFile.files[0];
+    if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const parsed = JSON.parse(reader.result);
+        const incoming = parsed && parsed.entries ? parsed.entries : parsed;
+        if(!incoming || typeof incoming !== 'object') throw new Error('shape');
+        const validKeys = Object.keys(incoming).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k));
+        if(!validKeys.length) throw new Error('empty');
+        let added = 0, merged = 0;
+        validKeys.forEach(k=>{
+          const inc = incoming[k];
+          if(!entryHasContent(inc)) return;
+          if(!data[k]){ data[k] = inc; added++; }
+          else{
+            // Never silently overwrite: keep whichever side actually has words in it.
+            ['morning','evening'].forEach(sec=>{
+              if(inc[sec] && sectionHasContent(inc[sec]) && !sectionHasContent(data[k][sec])){ data[k][sec] = inc[sec]; merged++; }
+            });
+          }
+        });
+        persist(); updateStreak(); updateNudge(); renderEntry();
+        alert('Restored ' + added + ' new ' + (added===1?'day':'days') + (merged ? ' and filled ' + merged + ' gap' + (merged===1?'':'s') : '') + '. Existing entries were left untouched.');
+      }catch(e){
+        alert('That file could not be read as a Five Minutes backup.');
+      }
+      importFile.value = '';
+    };
+    reader.readAsText(f);
+  });
+
+  function updateNudge(){
+    const el = document.getElementById('backupNudge');
+    let last = null;
+    try{ last = JSON.parse(localStorage.getItem(BACKUP_KEY)); }catch(e){}
+    const total = countEntries();
+    const since = total - (last && typeof last.count === 'number' ? last.count : 0);
+    if(!last && total >= 3){
+      el.textContent = 'You have ' + total + ' entries and no backup yet. Tap Back up \u2014 browser storage is not a safe long-term home.';
+      el.classList.add('show');
+    }else if(since >= 7){
+      el.textContent = since + ' entries written since your last backup. Tap Back up.';
+      el.classList.add('show');
+    }else{
+      el.classList.remove('show');
+    }
+  }
+
+  // ---------- skin: clock-driven, with a manual override ----------
+  // Dusk runs 17:00\u201304:59. The override exists because an automatic switch you
+  // cannot countermand is an irritation, not a feature \u2014 at 16:58 on a dark
+  // February afternoon you will want dusk, and the clock will disagree.
+  const SKIN_KEY = 'fiveMinuteJournal.skin.v1';
+  const DUSK_FROM = 17, DUSK_UNTIL = 5;
+  const SKIN_MODES = ['auto','day','dusk'];
+  const SKIN_UI = {
+    auto: {glyph:'\u25D1', label:'Auto'},
+    day:  {glyph:'\u2600', label:'Day'},
+    dusk: {glyph:'\u263E', label:'Dusk'}
+  };
+  let skinMode = 'auto';
+  try{ const v = localStorage.getItem(SKIN_KEY); if(SKIN_MODES.indexOf(v) !== -1) skinMode = v; }catch(e){}
+
+  function clockSkin(){
+    const h = new Date().getHours();
+    return (h >= DUSK_FROM || h < DUSK_UNTIL) ? 'dusk' : 'day';
+  }
+  function applySkin(){
+    const skin = skinMode === 'auto' ? clockSkin() : skinMode;
+    document.documentElement.setAttribute('data-skin', skin);
+    const ui = SKIN_UI[skinMode];
+    document.getElementById('skinGlyph').innerHTML = ui.glyph;
+    document.getElementById('skinLabel').textContent = ui.label;
+    document.getElementById('btnSkin').setAttribute('title',
+      skinMode === 'auto' ? 'Following the clock \u2014 currently ' + skin : 'Held on ' + skin);
+    // Keep the Android status bar in step, or the illusion breaks at the top edge.
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', getComputedStyle(document.documentElement).getPropertyValue('--status').trim() || '#26241F');
+  }
+  document.getElementById('btnSkin').addEventListener('click', ()=>{
+    skinMode = SKIN_MODES[(SKIN_MODES.indexOf(skinMode) + 1) % SKIN_MODES.length];
+    try{ localStorage.setItem(SKIN_KEY, skinMode); }catch(e){}
+    applySkin();
+  });
+  setInterval(()=>{ if(skinMode === 'auto') applySkin(); }, 60000);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && skinMode === 'auto') applySkin(); });
+  applySkin();
+
+  // Offline shell, only when served over https and sw.js is present. Fails silently
+  // on file:// or when the file isn't there, which is the correct behaviour.
+  if('serviceWorker' in navigator && location.protocol === 'https:'){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+
+  // ---------- init ----------
+  updateStreak();
+  updateNudge();
+  renderEntry();
+})();
+</script>
+</body>
+</html>

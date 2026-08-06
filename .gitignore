@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# PRIVATE DATA — this is the important part.
+# This repository is PUBLIC. The backup and export files contain the actual
+# journal entries. If one ever lands in this folder, it must not be committed.
+# ---------------------------------------------------------------------------
+five-minutes-backup-*.json
+five-minutes-journal-*.md
+*backup*.json
+/backups/
+/entries/
+
+# ---------------------------------------------------------------------------
+# Windows clutter
+# ---------------------------------------------------------------------------
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
+*.stackdump
+
+# OneDrive sync artefacts
+*.tmp
+~$*
+
+# ---------------------------------------------------------------------------
+# macOS (the owner may open this on a Mac)
+# ---------------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+._*
+.Spotlight-V100
+.Trashes
+
+# ---------------------------------------------------------------------------
+# Editors and tooling
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*~
+
+# Claude Code personal settings (local permission grants — not for publishing)
+.claude/settings.local.json
+
+# ---------------------------------------------------------------------------
+# Anything that turns up during development but shouldn't ship
+# ---------------------------------------------------------------------------
+node_modules/
+package-lock.json
+/test/
+*.test.mjs
+/scratch/
