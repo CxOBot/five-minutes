@@ -197,6 +197,16 @@
   .arrival-begin{appearance:none; border:1px solid var(--hairline); background:none; border-radius:22px; padding:10px 26px; font-family:'Mukta',system-ui,sans-serif; font-weight:600; font-size:13px; letter-spacing:0.02em; color:var(--ink-soft); cursor:pointer; min-height:38px;}
   .arrival-begin:focus-visible{outline:2px solid var(--ink-soft);}
 
+  /* ---- completion state (Change 6): today is written; the form steps aside ---- */
+  .complete{text-align:center; padding:44px 22px;}
+  .complete-passage{margin-bottom:30px;}
+  .complete-passage .roman{font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-style:italic; font-size:19px; line-height:1.55; color:var(--ink); margin:0 0 14px;}
+  .complete-passage .gloss{font-size:13px; line-height:1.6; color:var(--ink-soft); margin:0 0 14px;}
+  .complete-passage .poet{font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:10.5px; letter-spacing:0.05em; text-transform:uppercase; color:var(--ink-soft); margin:0;}
+  .complete-line{font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-size:17px; color:var(--ink); margin:0 0 24px;}
+  .complete-reopen{appearance:none; border:1px solid var(--hairline); background:none; border-radius:22px; padding:10px 24px; font-family:'Mukta',system-ui,sans-serif; font-weight:600; font-size:13px; letter-spacing:0.02em; color:var(--ink-soft); cursor:pointer; min-height:38px;}
+  .complete-reopen:focus-visible{outline:2px solid var(--ink-soft);}
+
   /* Takeover: while gated, only the passage shows. The storage banner is
      deliberately NOT hidden — silent data loss must stay loud even behind the gate. */
   .app.gated header, .app.gated .datebar, .app.gated .toprow, .app.gated .toolbar,
@@ -257,6 +267,14 @@
       <div id="entryLocked" style="display:none;" class="locked">
         <div class="glyph">&mdash;</div>
         <p>This day hasn't arrived yet. Come back when it does.</p>
+      </div>
+
+      <!-- Completion state (Change 6): when today is fully written, the app stops
+           offering work already done. Chrome (datebar, pills, toolbar) stays. -->
+      <div id="entryComplete" style="display:none;" class="complete">
+        <div class="complete-passage" id="completePassage"></div>
+        <p class="complete-line">Today is written.</p>
+        <button class="complete-reopen" id="reopenBtn" type="button">Reopen today</button>
       </div>
 
       <div id="entryContent">
@@ -640,7 +658,16 @@
       if(exp.evening) eveningOpen = true;
     }
 
-    return { gate, completion:false, morningOpen, eveningOpen };
+    // Change 6: completion. When today is fully written and not reopened, show
+    // the completion state instead of the form. It takes precedence over the
+    // gate, so a completed day skips arrival entirely.
+    const entry = data[dateKey];
+    const complete = isToday
+      && sectionHasContent(entry && entry.morning)
+      && sectionHasContent(entry && entry.evening)
+      && sessionState.reopenedFor !== dateKey;
+
+    return { gate: complete ? false : gate, completion: complete, morningOpen, eveningOpen };
   }
 
   // Resolve the view for the current date, store it, and render. This is the
@@ -683,6 +710,20 @@
     document.getElementById('arrivalPassage').innerHTML = passageHTML(coupletFor(currentKey, theme));
   }
 
+  // Completion state: the day's passage, then "Today is written." and a reopen.
+  function renderCompletion(){
+    const theme = (new Date().getHours() >= DUSK_FROM) ? 'evening' : 'morning';
+    document.getElementById('completePassage').innerHTML = passageHTML(coupletFor(currentKey, theme));
+  }
+
+  // Reopen restores the normal editable view. Also mark arrived, so a day that
+  // reached completion via a cold start (skipping the gate) doesn't now re-gate.
+  function reopenToday(){
+    sessionState.reopenedFor = currentKey;
+    sessionState.arrivedFor = currentKey;
+    applyView();
+  }
+
   function renderEntry(){
     const app = document.querySelector('.app');
     // Arrival gate takeover (Change 3). Storage banner stays visible (see CSS).
@@ -692,8 +733,18 @@
       return;
     }
     app.classList.remove('gated');
-
     renderDateBar();
+
+    // Completion state (Change 6): keep the chrome, replace only the form.
+    if(view.completion){
+      renderCompletion();
+      document.getElementById('entryLocked').style.display = 'none';
+      document.getElementById('entryContent').style.display = 'none';
+      document.getElementById('entryComplete').style.display = 'block';
+      return;
+    }
+    document.getElementById('entryComplete').style.display = 'none';
+
     const isFuture = currentKey > todayKey();
     document.getElementById('entryLocked').style.display = isFuture ? 'block' : 'none';
     document.getElementById('entryContent').style.display = isFuture ? 'none' : 'block';
@@ -1127,6 +1178,9 @@
   document.getElementById('collapsedMorning').addEventListener('click', ()=>expandSection('morning'));
   document.getElementById('collapsedEvening').addEventListener('click', ()=>expandSection('evening'));
 
+  // Completion: reopen restores the editable view.
+  document.getElementById('reopenBtn').addEventListener('click', reopenToday);
+
   // If the day rolls over while the app sits in the background, follow it forward
   // on return (which re-gates the new day, since arrivedFor is now yesterday).
   document.addEventListener('visibilitychange', ()=>{
@@ -1149,7 +1203,7 @@
       window.__fm = {
         entryHasContent, sectionHasContent,
         commit, commitAll, renderEntry, renderBrowse, showView,
-        resolveView, applyView, dismissArrival, expandSection, coupletFor, els, todayKey, DUSK_FROM,
+        resolveView, applyView, dismissArrival, expandSection, reopenToday, coupletFor, els, todayKey, DUSK_FROM,
         get data(){ return data; }, setData(d){ data = d; },
         get view(){ return view; },
         get sessionState(){ return sessionState; },
