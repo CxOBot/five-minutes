@@ -159,6 +159,31 @@
   .skin-btn{display:flex; align-items:center; gap:6px;}
   .skin-btn .glyph{font-size:13px; line-height:1;}
 
+  /* ---- toast: every action reports its outcome, success or failure ---- */
+  .toast{position:fixed; left:50%; bottom:24px; transform:translate(-50%, 20px);
+    max-width:min(420px, calc(100vw - 32px)); background:var(--ink); color:var(--paper);
+    padding:12px 16px; border-radius:10px; font-family:'Mukta',system-ui,sans-serif;
+    font-size:13.5px; line-height:1.45; text-align:center; opacity:0; pointer-events:none;
+    transition:opacity .22s ease, transform .22s ease; z-index:60;
+    box-shadow:0 8px 28px rgba(0,0,0,0.24);}
+  .toast.show{opacity:1; transform:translate(-50%, 0);}
+  .toast.good{background:var(--moss-deep); color:var(--on-accent);}
+  .toast.warn{background:#7A2E2E; color:#F6EFE4;}
+
+  /* ---- manual copy fallback ---- */
+  .raw-sheet{position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:70;
+    display:none; align-items:center; justify-content:center; padding:20px;}
+  .raw-sheet.show{display:flex;}
+  .raw-inner{background:var(--paper); border-radius:14px; padding:20px; width:100%;
+    max-width:520px; max-height:82vh; display:flex; flex-direction:column; gap:10px;}
+  .raw-inner h3{font-family:'Fraunces',Georgia,serif; font-size:17px; font-weight:600; color:var(--ink); margin:0;}
+  .raw-inner p{font-size:13px; line-height:1.5; color:var(--ink-soft); margin:0;}
+  #rawText{flex:1; min-height:180px; background:var(--field-bg); border:1px solid var(--hairline);
+    border-radius:8px; padding:10px; font-family:'IBM Plex Mono',monospace; font-size:11px;
+    line-height:1.5; color:var(--ink); resize:none;}
+  .raw-actions{display:flex; gap:8px;}
+  .raw-actions .tool-btn{flex:1;}
+
   .autosave-note{text-align:center; font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:10.5px; color:var(--ink-soft); opacity:0.75; margin:4px 0 0;}
 </style>
 </head>
@@ -196,7 +221,7 @@
     <button class="tool-btn" id="btnExportMd">Export as text</button>
     <button class="tool-btn" id="btnImport">Restore</button>
     <button class="tool-btn skin-btn" id="btnSkin" aria-live="polite"><span class="glyph" id="skinGlyph">&#9788;</span><span id="skinLabel">Auto</span></button>
-    <input type="file" id="importFile" accept="application/json,.json">
+    <input type="file" id="importFile" accept="application/json,text/plain,.json,.txt">
   </div>
   <div class="backup-nudge" id="backupNudge"></div>
 
@@ -262,6 +287,20 @@
     </section>
 
   </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="raw-sheet" id="rawSheet">
+    <div class="raw-inner">
+      <h3>Copy your backup out by hand</h3>
+      <p>This device blocked both saving methods. Select everything below, copy it, and paste it into an email or a note. Keep it &mdash; Restore can read it back.</p>
+      <textarea id="rawText" readonly spellcheck="false"></textarea>
+      <div class="raw-actions">
+        <button class="tool-btn primary" id="rawCopy">Copy all</button>
+        <button class="tool-btn" id="rawClose">Close</button>
+      </div>
+    </div>
+  </div>
 
   <footer class="hint">Stored in this browser on this device only — nothing leaves your phone.<br>Browser storage can be cleared by the browser itself. Back up regularly.</footer>
 </div>
@@ -745,28 +784,76 @@
   // ---------- backup / restore ----------
   // The original build had no way to get data out. On a device where the browser
   // owns the only copy, that makes every entry hostage to a cache clear.
-  function saveAs(filename, text, mime){
-    const type = mime || 'text/plain;charset=utf-8';
-    // On Android the share sheet is the shortest path into Drive: one tap, no
-    // Downloads-folder detour and no manual move afterwards.
+  let toastTimer = null;
+  function toast(msg, tone){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (tone ? ' ' + tone : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>{ el.className = 'toast'; }, 4200);
+  }
+
+  // Last-resort escape hatch: put the text on screen so it can always be copied
+  // out by hand, whatever the platform refuses to do.
+  function showRaw(text){
+    const box = document.getElementById('rawSheet');
+    document.getElementById('rawText').value = text;
+    box.classList.add('show');
+  }
+  document.getElementById('rawClose').addEventListener('click', ()=>{
+    document.getElementById('rawSheet').classList.remove('show');
+  });
+  document.getElementById('rawCopy').addEventListener('click', async ()=>{
+    const ta = document.getElementById('rawText');
     try{
-      const file = new File([text], filename, {type});
-      if(navigator.canShare && navigator.canShare({files:[file]})){
-        navigator.share({files:[file], title:'Five Minutes backup'}).catch(()=>{});
-        return true;
+      await navigator.clipboard.writeText(ta.value);
+      toast('Copied. Paste it somewhere safe.', 'good');
+    }catch(e){
+      ta.select(); ta.setSelectionRange(0, ta.value.length);
+      toast('Press and hold, then Copy.');
+    }
+  });
+
+  // Android's share sheet only accepts common audio, image, text and video file
+  // extensions — Chromium restricts the list deliberately. A .json or .md file is
+  // rejected, so we hand the share sheet a .txt carrying identical content and keep
+  // the richer extension for the download path. Restore reads either.
+  async function saveAs(baseName, text, mime, shareExt){
+    const type = mime || 'text/plain;charset=utf-8';
+
+    // 1. Share sheet — one tap into Drive, when the platform allows it.
+    try{
+      if(navigator.share && navigator.canShare){
+        const shareFile = new File([text], baseName + (shareExt || '.txt'), {type:'text/plain'});
+        if(navigator.canShare({files:[shareFile]})){
+          await navigator.share({files:[shareFile], title:'Five Minutes backup'});
+          toast('Sent to the share sheet.', 'good');
+          return true;
+        }
       }
-    }catch(e){ /* no share support — fall through */ }
+    }catch(err){
+      if(err && err.name === 'AbortError'){ toast('Cancelled \u2014 nothing was saved.'); return false; }
+      // Anything else: the platform refused. Fall through rather than fail silently.
+      console.warn('Share unavailable, falling back to download:', err);
+    }
+
+    // 2. Download.
     try{
       const blob = new Blob([text], {type});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = filename;
+      a.href = url; a.download = baseName + (mime === 'application/json' ? '.json' : '.md');
       document.body.appendChild(a); a.click();
       setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1500);
+      toast('Saved to your Downloads folder.', 'good');
       return true;
-    }catch(e){ console.error(e); alert('Could not write the file on this device. Open Browse, select all, and copy your entries out manually.'); return false; }
+    }catch(e){ console.error(e); }
+
+    // 3. On screen, to copy by hand. There is always a way out.
+    toast('This device blocked both saving methods \u2014 copy it manually.', 'warn');
+    showRaw(text);
+    return false;
   }
-  const download = saveAs;
   function stamp(){ return todayKey(); }
 
   function markBackedUp(){
@@ -775,14 +862,17 @@
   }
   function countEntries(){ return Object.keys(data).filter(k=>entryHasContent(data[k])).length; }
 
-  document.getElementById('btnExport').addEventListener('click', ()=>{
+  document.getElementById('btnExport').addEventListener('click', async ()=>{
     clearTimeout(autosaveTimer); commitAll();
+    if(countEntries() === 0){ toast('Nothing to back up yet \u2014 write an entry first.'); return; }
     const payload = {app:'five-minutes', schema:2, exportedAt:new Date().toISOString(), entries:data};
-    if(download('five-minutes-backup-'+stamp()+'.json', JSON.stringify(payload, null, 2), 'application/json')) markBackedUp();
+    const okay = await saveAs('five-minutes-backup-'+stamp(), JSON.stringify(payload, null, 2), 'application/json');
+    if(okay) markBackedUp();
   });
 
-  document.getElementById('btnExportMd').addEventListener('click', ()=>{
+  document.getElementById('btnExportMd').addEventListener('click', async ()=>{
     clearTimeout(autosaveTimer); commitAll();
+    if(countEntries() === 0){ toast('Nothing to export yet \u2014 write an entry first.'); return; }
     const keys = Object.keys(data).filter(k=>entryHasContent(data[k])).sort();
     const lines = ['# Five Minutes \u2014 journal export', '', 'Exported ' + fmtLong(todayKey()) + '  \u00b7  ' + keys.length + ' entries', ''];
     keys.forEach(k=>{
@@ -802,7 +892,7 @@
       }
       lines.push('---', '');
     });
-    download('five-minutes-journal-'+stamp()+'.md', lines.join('\n'), 'text/markdown;charset=utf-8');
+    await saveAs('five-minutes-journal-'+stamp(), lines.join('\n'), 'text/markdown;charset=utf-8');
   });
 
   const importFile = document.getElementById('importFile');
@@ -831,9 +921,9 @@
           }
         });
         persist(); updateStreak(); updateNudge(); renderEntry();
-        alert('Restored ' + added + ' new ' + (added===1?'day':'days') + (merged ? ' and filled ' + merged + ' gap' + (merged===1?'':'s') : '') + '. Existing entries were left untouched.');
+        toast('Restored ' + added + ' new ' + (added===1?'day':'days') + (merged ? ' and filled ' + merged + ' gap' + (merged===1?'':'s') : '') + '.', 'good');
       }catch(e){
-        alert('That file could not be read as a Five Minutes backup.');
+        toast('That file is not a Five Minutes backup.', 'warn');
       }
       importFile.value = '';
     };
