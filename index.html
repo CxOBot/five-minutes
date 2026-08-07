@@ -23,7 +23,7 @@
     --field-bg:#FFFFFF; --on-accent:#EDE7DA;
     --block-morning:#F3EEE3; --block-evening:#E8E2E6;
     --block-morning-edge:rgba(166,128,61,0.28); --block-evening-edge:rgba(74,59,82,0.24);
-    --ribbon-a:#A6803D; --ribbon-b:#8a6a2f; --morning-tag:#8a6a2f;
+    --morning-tag:#8a6a2f;
     --status:#26241F;
   }
   [data-skin="dusk"]{
@@ -33,7 +33,7 @@
     --field-bg:#191620; --on-accent:#F2ECE0;
     --block-morning:#282230; --block-evening:#2E2639;
     --block-morning-edge:rgba(210,172,104,0.30); --block-evening-edge:rgba(193,166,206,0.26);
-    --ribbon-a:#D2AC68; --ribbon-b:#A07E3E; --morning-tag:#D2AC68;
+    --morning-tag:#D2AC68;
     --status:#211D26;
   }
   body, .app, .field input[type=text], .field textarea, #searchBox, .entry-card,
@@ -45,9 +45,6 @@
   html,body{margin:0;padding:0;}
   body{background:var(--paper); color:var(--ink); font-family:'Mukta',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; -webkit-font-smoothing:antialiased; min-height:100vh; display:flex; justify-content:center; padding:0 0 48px;}
   .app{width:100%; max-width:480px; min-height:100vh; background:var(--paper); position:relative; display:flex; flex-direction:column;}
-
-  .ribbon{position:absolute; top:0; right:22px; width:34px; background:linear-gradient(180deg, var(--ribbon-a), var(--ribbon-b)); color:var(--on-accent); text-align:center; padding:10px 0 16px; font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.04em; clip-path:polygon(0 0,100% 0,100% 100%,50% 84%,0 100%); box-shadow:0 3px 8px rgba(0,0,0,0.18); z-index:5; line-height:1.5;}
-  .ribbon b{display:block; font-size:17px; font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-weight:600;}
 
   header{padding:26px 24px 0;}
   .eyebrow{font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-soft); margin:0 0 6px;}
@@ -193,8 +190,6 @@
     <b>This device is not saving your entries.</b>
     Browser storage is unavailable here — most likely because this file was opened directly from the Files app. Anything you type will be lost when you close the tab. Serve this file over https (or add it to your Home screen from a hosted URL) before relying on it.
   </div>
-
-  <div class="ribbon" id="ribbon"><b id="streakNum">0</b>DAY<br>STREAK</div>
 
   <header>
     <p class="eyebrow">Daily Practice</p>
@@ -655,7 +650,7 @@
       delete data[currentKey][section];               // fields cleared out = entry withdrawn
       if(!Object.keys(data[currentKey]).length) delete data[currentKey];
     }
-    persist(); updateStreak(); updateNudge();
+    persist(); updateNudge();
   }
   function commitAll(){ commit('morning'); commit('evening'); }
 
@@ -678,17 +673,6 @@
   document.getElementById('saveEvening').addEventListener('click', ()=>{
     clearTimeout(autosaveTimer); commit('evening'); flash(document.getElementById('flagEvening'));
   });
-
-  // A streak should mean you wrote something, not that you tapped Save on a blank page.
-  function updateStreak(){
-    let streak = 0; let k = todayKey();
-    for(let i=0;i<400;i++){
-      if(entryHasContent(data[k])){ streak++; k = addDays(k,-1); }
-      else if(k === todayKey()){ k = addDays(k,-1); }
-      else break;
-    }
-    document.getElementById('streakNum').textContent = streak;
-  }
 
   // ---------- navigation ----------
   document.getElementById('prevDay').addEventListener('click', ()=>{
@@ -775,7 +759,7 @@
         ev.stopPropagation();
         const k = btn.dataset.del;
         if(confirm('Delete the entry for ' + fmtLong(k) + '? This cannot be undone.')){
-          delete data[k]; persist(); updateStreak(); updateNudge(); renderBrowse();
+          delete data[k]; persist(); updateNudge(); renderBrowse();
         }
       });
     });
@@ -920,7 +904,7 @@
             });
           }
         });
-        persist(); updateStreak(); updateNudge(); renderEntry();
+        persist(); updateNudge(); renderEntry();
         toast('Restored ' + added + ' new ' + (added===1?'day':'days') + (merged ? ' and filled ' + merged + ' gap' + (merged===1?'':'s') : '') + '.', 'good');
       }catch(e){
         toast('That file is not a Five Minutes backup.', 'warn');
@@ -994,9 +978,20 @@
   }
 
   // ---------- init ----------
-  updateStreak();
   updateNudge();
   renderEntry();
+
+  // ---- test seam: internals exposed only when a harness sets the flag before
+  // this script runs. Inert in the shipped file (nothing sets it in the browser). ----
+  try{
+    if(window.__FM_ALLOW_TEST__){
+      window.__fm = {
+        entryHasContent, sectionHasContent,
+        commit, commitAll, renderEntry, renderBrowse, showView,
+        get data(){ return data; }, setData(d){ data = d; }
+      };
+    }
+  }catch(e){}
 })();
 </script>
 </body>
