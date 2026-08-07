@@ -149,6 +149,12 @@
   .block .couplet{background:transparent; border-left-width:3px; padding-left:13px; border-radius:0;}
   .block .section-tag{margin-bottom:12px;}
 
+  /* ---- time-aware sections (Change 4): a collapsed section is one tappable line ---- */
+  .section-collapsed{display:none; width:100%; text-align:left; appearance:none; background:none; border:none; border-bottom:0.5px solid var(--hairline); padding:15px 2px; font-family:'Mukta',system-ui,sans-serif; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft); cursor:pointer; min-height:38px;}
+  .section-collapsed:hover{color:var(--ink);}
+  .block.collapsed .section-body{display:none;}
+  .block.collapsed .section-collapsed{display:block;}
+
   /* ---- skin toggle ---- */
   .skin-btn{display:flex; align-items:center; gap:6px;}
   .skin-btn .glyph{font-size:13px; line-height:1;}
@@ -254,7 +260,9 @@
       </div>
 
       <div id="entryContent">
-        <div class="block morning-block">
+        <div class="block morning-block" id="blockMorning">
+        <button class="section-collapsed" id="collapsedMorning" type="button"></button>
+        <div class="section-body" id="bodyMorning">
         <div class="section-tag morning"><span class="dot"></span>Morning &middot; 2 minutes</div>
         <div class="couplet" id="coupletMorning"></div>
 
@@ -278,10 +286,13 @@
           <p class="autosave-note">Autosaves as you type.</p>
         </div>
         </div>
+        </div>
 
         <hr class="divider">
 
-        <div class="block evening-block">
+        <div class="block evening-block" id="blockEvening">
+        <button class="section-collapsed" id="collapsedEvening" type="button"></button>
+        <div class="section-body" id="bodyEvening">
         <div class="section-tag evening"><span class="dot"></span>Evening &middot; 2 minutes</div>
         <div class="couplet eve" id="coupletEvening"></div>
 
@@ -297,6 +308,7 @@
           <button class="save evening-btn" id="saveEvening">Close the day</button>
           <p class="saved-flag" id="flagEvening">Saved.</p>
           <p class="autosave-note">Autosaves as you type.</p>
+        </div>
         </div>
         </div>
       </div>
@@ -612,7 +624,23 @@
     // arrivedFor holds the dateKey already dismissed, so a midnight rollover
     // (arrivedFor is yesterday) re-gates the new day.
     const gate = isToday && sessionState.arrivedFor !== dateKey;
-    return { gate, completion:false, morningOpen:true, eveningOpen:true };
+
+    // Change 4: time-aware sections. Today follows the clock at DUSK_FROM — the
+    // same boundary as the skin, so they can never drift. Any non-today date
+    // (past has no "now") shows both. Manual tap-expansions are ORed on top.
+    let morningOpen = true, eveningOpen = true;
+    if(isToday){
+      const evening = now.getHours() >= DUSK_FROM;
+      morningOpen = !evening;
+      eveningOpen = evening;
+    }
+    const exp = sessionState.expanded && sessionState.expanded[dateKey];
+    if(exp){
+      if(exp.morning) morningOpen = true;
+      if(exp.evening) eveningOpen = true;
+    }
+
+    return { gate, completion:false, morningOpen, eveningOpen };
   }
 
   // Resolve the view for the current date, store it, and render. This is the
@@ -686,6 +714,36 @@
     els.h2.value = t.evening?.highlights?.[1] || '';
     els.h3.value = t.evening?.highlights?.[2] || '';
     els.improve.value = t.evening?.improve || '';
+
+    applySectionState(t);
+  }
+
+  // Collapse/expand each section per the resolved view. A collapsed section is a
+  // single tappable line stating its state. Hidden fields keep their values, so
+  // nothing is lost — commitAll captures them regardless of visibility.
+  function applySectionState(t){
+    setSection('blockMorning', 'collapsedMorning', 'Morning', sectionHasContent(t.morning), view.morningOpen);
+    setSection('blockEvening', 'collapsedEvening', 'Evening', sectionHasContent(t.evening), view.eveningOpen);
+  }
+  function setSection(blockId, headerId, label, hasContent, open){
+    const block = document.getElementById(blockId);
+    if(open){ block.classList.remove('collapsed'); }
+    else{
+      block.classList.add('collapsed');
+      document.getElementById(headerId).textContent =
+        label + ' — ' + (hasContent ? 'written' : 'not yet written');
+    }
+  }
+
+  // Tapping a collapsed header opens it. Flush any pending autosave first (a
+  // collapse/expand is a view change), then update the stored view locally and
+  // re-render — WITHOUT re-resolving (so this can never reactively flip the page).
+  function expandSection(section){
+    clearTimeout(autosaveTimer); commitAll();
+    if(!sessionState.expanded[currentKey]) sessionState.expanded[currentKey] = {};
+    sessionState.expanded[currentKey][section] = true;
+    view[section + 'Open'] = true;
+    renderEntry();
   }
 
   function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -1065,6 +1123,10 @@
   // brings the writing surface. Begin stays a real focusable button.
   document.getElementById('arrival').addEventListener('click', dismissArrival);
 
+  // Time-aware section toggles: a collapsed header opens on tap.
+  document.getElementById('collapsedMorning').addEventListener('click', ()=>expandSection('morning'));
+  document.getElementById('collapsedEvening').addEventListener('click', ()=>expandSection('evening'));
+
   // If the day rolls over while the app sits in the background, follow it forward
   // on return (which re-gates the new day, since arrivedFor is now yesterday).
   document.addEventListener('visibilitychange', ()=>{
@@ -1087,7 +1149,7 @@
       window.__fm = {
         entryHasContent, sectionHasContent,
         commit, commitAll, renderEntry, renderBrowse, showView,
-        resolveView, applyView, dismissArrival, coupletFor, els, todayKey, DUSK_FROM,
+        resolveView, applyView, dismissArrival, expandSection, coupletFor, els, todayKey, DUSK_FROM,
         get data(){ return data; }, setData(d){ data = d; },
         get view(){ return view; },
         get sessionState(){ return sessionState; },
