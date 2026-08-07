@@ -558,6 +558,32 @@
 
   let currentKey = todayKey();
 
+  // ---------- view state ----------
+  // Session-scoped, never persisted. arrivedFor / reopenedFor hold the dateKey
+  // they apply to (not bools), so a midnight rollover re-gates / re-resolves.
+  // expanded holds manual section tap-expansions, keyed by date.
+  let sessionState = { arrivedFor: null, reopenedFor: null, expanded: {} };
+
+  // The single source of truth for what the entry screen shows. Recomputed only
+  // at boot and on date change (never reactively after a commit), then rendered.
+  let view = { gate:false, completion:false, morningOpen:true, eveningOpen:true };
+
+  // Pure: no DOM, no module globals, no `new Date()` inside. Everything it needs
+  // is passed in, so it is directly unit-testable and `now` is injectable.
+  // Baseline returns today's behaviour; later changes fill in the fields —
+  // gate (Change 3), morningOpen/eveningOpen (Change 4), completion (Change 6).
+  function resolveView(dateKey, now, data, sessionState){
+    return { gate:false, completion:false, morningOpen:true, eveningOpen:true };
+  }
+
+  // Resolve the view for the current date, store it, and render. This is the
+  // ONLY path that recomputes the view — date changes and boot call it; a plain
+  // Browse↔Entry tab switch or a post-commit update does not.
+  function applyView(){
+    view = resolveView(currentKey, new Date(), data, sessionState);
+    renderEntry();
+  }
+
   // ---------- render entry page ----------
   const els = {};
   ['g1','g2','g3','i1','i2','i3','affirm','h1','h2','h3','improve'].forEach(id=>els[id]=document.getElementById(id));
@@ -674,12 +700,12 @@
   // ---------- navigation ----------
   document.getElementById('prevDay').addEventListener('click', ()=>{
     clearTimeout(autosaveTimer); commitAll();
-    currentKey = addDays(currentKey,-1); renderEntry();
+    currentKey = addDays(currentKey,-1); applyView();
   });
   document.getElementById('nextDay').addEventListener('click', ()=>{
     if(currentKey < todayKey()){
       clearTimeout(autosaveTimer); commitAll();
-      currentKey = addDays(currentKey,1); renderEntry();
+      currentKey = addDays(currentKey,1); applyView();
     }
   });
   const dateInput = document.getElementById('dateInput');
@@ -692,7 +718,7 @@
   dateInput.addEventListener('change', ()=>{
     if(dateInput.value){
       clearTimeout(autosaveTimer); commitAll();
-      currentKey = dateInput.value > todayKey() ? todayKey() : dateInput.value; renderEntry();
+      currentKey = dateInput.value > todayKey() ? todayKey() : dateInput.value; applyView();
     }
   });
 
@@ -749,7 +775,7 @@
       return block;
     }).join('');
     el.querySelectorAll('.entry-card').forEach(card=>{
-      card.addEventListener('click', ()=>{ currentKey = card.dataset.key; showView('entry'); });
+      card.addEventListener('click', ()=>{ currentKey = card.dataset.key; applyView(); showView('entry'); });
     });
     el.querySelectorAll('.card-del').forEach(btn=>{
       btn.addEventListener('click', ev=>{
@@ -976,7 +1002,7 @@
 
   // ---------- init ----------
   updateNudge();
-  renderEntry();
+  applyView();
 
   // ---- test seam: internals exposed only when a harness sets the flag before
   // this script runs. Inert in the shipped file (nothing sets it in the browser). ----
@@ -985,7 +1011,11 @@
       window.__fm = {
         entryHasContent, sectionHasContent,
         commit, commitAll, renderEntry, renderBrowse, showView,
-        get data(){ return data; }, setData(d){ data = d; }
+        resolveView, applyView, els, todayKey, DUSK_FROM,
+        get data(){ return data; }, setData(d){ data = d; },
+        get view(){ return view; },
+        get sessionState(){ return sessionState; },
+        get currentKey(){ return currentKey; }, setCurrentKey(k){ currentKey = k; }
       };
     }
   }catch(e){}
