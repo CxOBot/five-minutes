@@ -52,4 +52,7 @@ node_modules/
 package-lock.json
 /test/
 *.test.mjs
+
+# Working briefs — notes for a change, not part of the shipped app
+BRIEF-*.md
 /scratch/
