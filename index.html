@@ -91,6 +91,12 @@
   .affirm-scaffold{font-size:11.5px; color:var(--ink-soft); padding:2px 1px 6px; margin-bottom:6px; line-height:1.5;}
   .affirm-scaffold b{color:var(--ink-soft); font-weight:700;}
 
+  /* ---- the dissolve (Change 1): the evening reflection lifts off the page and
+         settles into a quiet marker. The pause (~1.2s) is the feature. ---- */
+  #improve.dissolving{transition:opacity 1.2s ease-out, transform 1.2s ease-out; opacity:0; transform:translateY(-8px); pointer-events:none;}
+  .written-marker{appearance:none; background:none; border:none; padding:8px 2px; min-height:38px; font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.08em; color:var(--ink-soft); cursor:pointer;}
+  .written-marker:hover{color:var(--ink);}
+
   hr.divider{border:none; border-top:1px solid var(--hairline); margin:28px 0 22px;}
 
   /* Autosave is the mechanism; these are the ritual full stop. Quiet, right-aligned. */
@@ -320,7 +326,10 @@
         <div class="field"><input type="text" id="h3" maxlength="140" placeholder="A highlight"></div>
 
         <p class="prompt" style="margin-top:20px;">How could today have been better?</p>
-        <div class="field evening"><textarea id="improve" rows="3" maxlength="280" placeholder="One honest reflection"></textarea></div>
+        <div class="field evening">
+          <textarea id="improve" rows="3" maxlength="280" placeholder="One honest reflection"></textarea>
+          <button class="written-marker" id="improveWritten" type="button" style="display:none;">written</button>
+        </div>
 
         <div class="save-bar">
           <button class="save evening-btn" id="saveEvening">Close the day</button>
@@ -631,6 +640,11 @@
   // a foreground return follows it (and re-gates).
   let anchoredToday = todayKey();
 
+  // Change 1: the evening reflection settles into a quiet "written" marker after
+  // Close the day. improveRevealed is true only while the marker has been tapped
+  // back open for editing; it resets on every date change.
+  let improveRevealed = false;
+
   // Pure: no DOM, no module globals, no `new Date()` inside. Everything it needs
   // is passed in, so it is directly unit-testable and `now` is injectable.
   // Baseline returns today's behaviour; later changes fill in the fields —
@@ -675,6 +689,7 @@
   // Browse↔Entry tab switch or a post-commit update does not.
   function applyView(){
     anchoredToday = todayKey();
+    improveRevealed = false;
     view = resolveView(currentKey, new Date(), data, sessionState);
     renderEntry();
   }
@@ -764,7 +779,7 @@
     els.h1.value = t.evening?.highlights?.[0] || '';
     els.h2.value = t.evening?.highlights?.[1] || '';
     els.h3.value = t.evening?.highlights?.[2] || '';
-    els.improve.value = t.evening?.improve || '';
+    renderImprove(t);
 
     applySectionState(t);
   }
@@ -795,6 +810,36 @@
     sessionState.expanded[currentKey][section] = true;
     view[section + 'Open'] = true;
     renderEntry();
+  }
+
+  // ---- the dissolve (Change 1): evening reflection only ----
+  function prefersReducedMotion(){
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  // Load the field and choose its resting state. A reflection with content shows
+  // the quiet marker (unless it's been tapped open to edit); otherwise the field.
+  function renderImprove(t){
+    els.improve.value = (t.evening && t.evening.improve) || '';
+    const hasContent = !!els.improve.value.trim();
+    if(hasContent && !improveRevealed) showImproveWritten();
+    else showImproveEditing();
+  }
+  function showImproveWritten(){
+    els.improve.classList.remove('dissolving');
+    els.improve.style.display = 'none';
+    document.getElementById('improveWritten').style.display = 'inline-block';
+  }
+  function showImproveEditing(){
+    document.getElementById('improveWritten').style.display = 'none';
+    els.improve.classList.remove('dissolving');
+    els.improve.style.display = '';
+  }
+  // Animate the text off the page, then settle into the marker. Only ever called
+  // AFTER a verified successful write (see the Close the day handler).
+  function dissolveImprove(){
+    const ta = els.improve;
+    ta.classList.add('dissolving');
+    setTimeout(()=>{ improveRevealed = false; showImproveWritten(); }, 1200);
   }
 
   function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -862,8 +907,28 @@
   document.getElementById('saveMorning').addEventListener('click', ()=>{
     clearTimeout(autosaveTimer); commit('morning'); flash(document.getElementById('flagMorning'));
   });
+  // Close the day. The dissolve fires ONLY from here (never from autosave), and
+  // only after a verified successful write. Sequence is not negotiable:
+  //   1. write   2. verify (storageOK && !persistFailed)   3. only then animate.
   document.getElementById('saveEvening').addEventListener('click', ()=>{
-    clearTimeout(autosaveTimer); commit('evening'); flash(document.getElementById('flagEvening'));
+    clearTimeout(autosaveTimer);
+    commit('evening');                                  // 1. write
+    if(!storageOK || persistFailed) return;             // 2. failed → banner already shown, do NOT animate
+    flash(document.getElementById('flagEvening'));
+    improveRevealed = false;
+    if(!els.improve.value.trim()){                      // nothing to dissolve (incl. a cleared field)
+      showImproveEditing();                             // marker off; plain empty field
+      return;
+    }
+    if(prefersReducedMotion()) showImproveWritten();    // 3a. reduced motion → straight to written
+    else dissolveImprove();                             // 3b. lift off, then settle into the marker
+  });
+
+  // Tapping the marker reveals the reflection for editing again.
+  document.getElementById('improveWritten').addEventListener('click', ()=>{
+    improveRevealed = true;
+    showImproveEditing();
+    els.improve.focus();
   });
 
   // ---------- navigation ----------
