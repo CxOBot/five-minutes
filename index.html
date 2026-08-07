@@ -179,6 +179,25 @@
   .raw-actions .tool-btn{flex:1;}
 
   .autosave-note{text-align:center; font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:10.5px; color:var(--ink-soft); opacity:0.75; margin:4px 0 0;}
+
+  /* ---- arrival gate (Change 3): open on the passage; the surface arrives on a tap ---- */
+  .arrival{display:none; flex:1; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:48px 30px; cursor:pointer;}
+  .arrival-inner{max-width:340px;}
+  .arrival-date{font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:30px;}
+  .arrival-passage{margin-bottom:36px;}
+  .arrival-passage .roman{font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-style:italic; font-size:20px; line-height:1.55; color:var(--ink); margin:0 0 16px;}
+  .arrival-passage .gloss{font-size:13.5px; line-height:1.6; color:var(--ink-soft); margin:0 0 16px;}
+  .arrival-passage .poet{font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-soft); margin:0;}
+  .arrival-begin{appearance:none; border:1px solid var(--hairline); background:none; border-radius:22px; padding:10px 26px; font-family:'Mukta',system-ui,sans-serif; font-weight:600; font-size:13px; letter-spacing:0.02em; color:var(--ink-soft); cursor:pointer; min-height:38px;}
+  .arrival-begin:focus-visible{outline:2px solid var(--ink-soft);}
+
+  /* Takeover: while gated, only the passage shows. The storage banner is
+     deliberately NOT hidden — silent data loss must stay loud even behind the gate. */
+  .app.gated header, .app.gated .datebar, .app.gated .toprow, .app.gated .toolbar,
+  .app.gated .backup-nudge, .app.gated main, .app.gated footer.hint{display:none;}
+  .app.gated .arrival{display:flex; animation:arrivalIn .5s ease both;}
+  @keyframes arrivalIn{from{opacity:0;} to{opacity:1;}}
+  @media (prefers-reduced-motion: reduce){ .app.gated .arrival{animation:none;} }
 </style>
 </head>
 <body>
@@ -186,6 +205,16 @@
   <div class="storage-alert" id="storageAlert">
     <b>This device is not saving your entries.</b>
     Browser storage is unavailable here — most likely because this file was opened directly from the Files app. Anything you type will be lost when you close the tab. Serve this file over https (or add it to your Home screen from a hosted URL) before relying on it.
+  </div>
+
+  <!-- Arrival gate (Change 3): on a cold start the app opens on the day's passage
+       alone. Tapping anywhere, or Begin, brings the writing surface. -->
+  <div class="arrival" id="arrival">
+    <div class="arrival-inner">
+      <div class="arrival-date" id="arrivalDate"></div>
+      <div class="arrival-passage" id="arrivalPassage"></div>
+      <button class="arrival-begin" id="beginBtn">Begin</button>
+    </div>
   </div>
 
   <header>
@@ -568,20 +597,37 @@
   // at boot and on date change (never reactively after a commit), then rendered.
   let view = { gate:false, completion:false, morningOpen:true, eveningOpen:true };
 
+  // The date we last treated as "today". If it rolls over while backgrounded,
+  // a foreground return follows it (and re-gates).
+  let anchoredToday = todayKey();
+
   // Pure: no DOM, no module globals, no `new Date()` inside. Everything it needs
   // is passed in, so it is directly unit-testable and `now` is injectable.
   // Baseline returns today's behaviour; later changes fill in the fields —
   // gate (Change 3), morningOpen/eveningOpen (Change 4), completion (Change 6).
   function resolveView(dateKey, now, data, sessionState){
-    return { gate:false, completion:false, morningOpen:true, eveningOpen:true };
+    const today = keyOf(now);
+    const isToday = dateKey === today;
+    // Change 3: cold start on today gates on the passage until dismissed.
+    // arrivedFor holds the dateKey already dismissed, so a midnight rollover
+    // (arrivedFor is yesterday) re-gates the new day.
+    const gate = isToday && sessionState.arrivedFor !== dateKey;
+    return { gate, completion:false, morningOpen:true, eveningOpen:true };
   }
 
   // Resolve the view for the current date, store it, and render. This is the
   // ONLY path that recomputes the view — date changes and boot call it; a plain
   // Browse↔Entry tab switch or a post-commit update does not.
   function applyView(){
+    anchoredToday = todayKey();
     view = resolveView(currentKey, new Date(), data, sessionState);
     renderEntry();
+  }
+
+  // Dismiss the arrival gate: remember we've arrived for this date, then re-resolve.
+  function dismissArrival(){
+    sessionState.arrivedFor = currentKey;
+    applyView();
   }
 
   // ---------- render entry page ----------
@@ -594,17 +640,31 @@
     document.getElementById('nextDay').disabled = (currentKey >= todayKey());
   }
 
+  function passageHTML(c){
+    return c ? ('<p class="roman">'+esc(c.roman)+'</p>'+(c.gloss?('<p class="gloss">'+esc(c.gloss)+'</p>'):'')+'<p class="poet">'+esc(c.poet)+'</p>') : '';
+  }
   function renderCouplets(){
-    const m = coupletFor(currentKey, 'morning');
-    const e = coupletFor(currentKey, 'evening');
-    const mEl = document.getElementById('coupletMorning');
-    const eEl = document.getElementById('coupletEvening');
-    const build = (c) => c ? ('<p class="roman">'+esc(c.roman)+'</p>'+(c.gloss?('<p class="gloss">'+esc(c.gloss)+'</p>'):'')+'<p class="poet">'+esc(c.poet)+'</p>') : '';
-    mEl.innerHTML = build(m);
-    eEl.innerHTML = build(e);
+    document.getElementById('coupletMorning').innerHTML = passageHTML(coupletFor(currentKey, 'morning'));
+    document.getElementById('coupletEvening').innerHTML = passageHTML(coupletFor(currentKey, 'evening'));
+  }
+
+  // Arrival gate: the day's date, its time-appropriate passage, and its attribution.
+  function renderArrival(){
+    document.getElementById('arrivalDate').textContent = fmtDow(currentKey) + '  ·  ' + fmtLong(currentKey);
+    const theme = (new Date().getHours() >= DUSK_FROM) ? 'evening' : 'morning';
+    document.getElementById('arrivalPassage').innerHTML = passageHTML(coupletFor(currentKey, theme));
   }
 
   function renderEntry(){
+    const app = document.querySelector('.app');
+    // Arrival gate takeover (Change 3). Storage banner stays visible (see CSS).
+    if(view.gate){
+      renderArrival();
+      app.classList.add('gated');
+      return;
+    }
+    app.classList.remove('gated');
+
     renderDateBar();
     const isFuture = currentKey > todayKey();
     document.getElementById('entryLocked').style.display = isFuture ? 'block' : 'none';
@@ -1000,6 +1060,22 @@
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 
+  // ---------- arrival gate wiring ----------
+  // Tapping anywhere on the gate — or the Begin button, whose click bubbles up —
+  // brings the writing surface. Begin stays a real focusable button.
+  document.getElementById('arrival').addEventListener('click', dismissArrival);
+
+  // If the day rolls over while the app sits in the background, follow it forward
+  // on return (which re-gates the new day, since arrivedFor is now yesterday).
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden) return;
+    const t = todayKey();
+    if(t !== anchoredToday){
+      if(currentKey === anchoredToday) currentKey = t;
+      applyView();
+    }
+  });
+
   // ---------- init ----------
   updateNudge();
   applyView();
@@ -1011,7 +1087,7 @@
       window.__fm = {
         entryHasContent, sectionHasContent,
         commit, commitAll, renderEntry, renderBrowse, showView,
-        resolveView, applyView, els, todayKey, DUSK_FROM,
+        resolveView, applyView, dismissArrival, coupletFor, els, todayKey, DUSK_FROM,
         get data(){ return data; }, setData(d){ data = d; },
         get view(){ return view; },
         get sessionState(){ return sessionState; },
