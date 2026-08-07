@@ -19,10 +19,9 @@
   :root, [data-skin="day"]{
     --paper:#EDE7DA; --paper-2:#E3DCCB; --ink:#26241F; --ink-soft:#5B5748;
     --moss:#5C6B47; --moss-deep:#414D33; --plum:#4A3B52; --plum-deep:#332839;
-    --gold:#A6803D; --hairline:rgba(38,36,31,0.14);
+    --gold:#7C5E28; --hairline:rgba(38,36,31,0.14);
+    --rule-empty:rgba(38,36,31,0.22); --rule-filled:rgba(38,36,31,0.10);
     --field-bg:#FFFFFF; --on-accent:#EDE7DA;
-    --block-morning:#F3EEE3; --block-evening:#E8E2E6;
-    --block-morning-edge:rgba(166,128,61,0.28); --block-evening-edge:rgba(74,59,82,0.24);
     --morning-tag:#8a6a2f;
     --status:#26241F;
   }
@@ -30,9 +29,8 @@
     --paper:#211D26; --paper-2:#2B2632; --ink:#EDE7DA; --ink-soft:#A79EAB;
     --moss:#7E9161; --moss-deep:#4A5A38; --plum:#C1A6CE; --plum-deep:#4E3F59;
     --gold:#D2AC68; --hairline:rgba(237,231,218,0.16);
+    --rule-empty:rgba(237,231,218,0.26); --rule-filled:rgba(237,231,218,0.12);
     --field-bg:#191620; --on-accent:#F2ECE0;
-    --block-morning:#282230; --block-evening:#2E2639;
-    --block-morning-edge:rgba(210,172,104,0.30); --block-evening-edge:rgba(193,166,206,0.26);
     --morning-tag:#D2AC68;
     --status:#211D26;
   }
@@ -75,33 +73,31 @@
   .couplet .poet{font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:10.5px; letter-spacing:0.05em; text-transform:uppercase; color:var(--gold); margin:0;}
   .couplet.eve .poet{color:var(--plum);}
 
-  .section-tag{display:flex; align-items:center; gap:8px; font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; margin:0 0 14px;}
-  .section-tag .dot{width:7px; height:7px; border-radius:50%;}
-  .morning .dot{background:var(--gold);} .evening .dot{background:var(--plum);}
-  .section-tag.morning{color:var(--morning-tag);} .section-tag.evening{color:var(--plum);}
+  .section-tag{display:flex; align-items:center; gap:8px; font-family:'Mukta',system-ui,sans-serif; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft); margin:0 0 14px;}
+  .section-tag .dot{width:6px; height:6px; border-radius:50%; background:var(--ink-soft); opacity:0.5;}
 
-  .prompt{font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-style:italic; font-size:16px; color:var(--ink); margin:0 0 10px; line-height:1.35;}
-  .field{margin-bottom:14px;}
+  /* Foolscap: prompts are quiet marginal questions in the page's own voice. */
+  .prompt{font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-style:italic; font-size:12.5px; color:var(--ink-soft); margin:0 0 10px; line-height:1.4;}
+  .field{margin-bottom:26px;}
   .field label{display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:6px; font-weight:500;}
-  .field input[type=text], .field textarea{width:100%; background:var(--field-bg); border:1px solid var(--hairline); border-radius:8px; padding:11px 12px; font-family:'Mukta',system-ui,sans-serif; font-size:14.5px; color:var(--ink); resize:none; line-height:1.4;}
-  .field input:disabled, .field textarea:disabled{background:var(--paper-2); color:var(--ink-soft);}
-  .field input[type=text]:focus, .field textarea:focus{outline:none; border-color:var(--gold);}
-  .field.affirmation input{font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-style:italic; font-size:15px;}
-  .field.evening input:focus, .field.evening textarea:focus{border-color:var(--plum);}
-  .affirm-scaffold{font-size:11.5px; color:var(--ink-soft); background:var(--paper-2); border-radius:8px; padding:9px 11px; margin-bottom:8px; line-height:1.5;}
-  .affirm-scaffold b{color:var(--morning-tag); font-weight:700;}
-
-  .g-row{display:flex; align-items:center; gap:10px;}
-  .g-row .num{font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:12px; color:var(--ink-soft); width:14px;}
+  /* Text sits on the paper over a hairline rule — no box, no fill, no border. */
+  .field input[type=text], .field textarea{width:100%; background:transparent; border:none; border-bottom:0.5px solid var(--rule-filled); border-radius:0; padding:6px 1px; font-family:'Fraunces',Georgia,'Iowan Old Style','Times New Roman',serif; font-size:15.5px; color:var(--ink); resize:none; line-height:1.75;}
+  /* An unwritten line reads as an invitation, not a boundary: rule a touch stronger when empty. */
+  .field input[type=text]:placeholder-shown, .field textarea:placeholder-shown{border-bottom-color:var(--rule-empty);}
+  .field input[type=text]::placeholder, .field textarea::placeholder{color:var(--ink-soft); opacity:0.5;}
+  .field input:disabled, .field textarea:disabled{color:var(--ink-soft); opacity:0.7;}
+  .field input[type=text]:focus, .field textarea:focus{outline:none; border-bottom-color:var(--ink-soft);}
+  .field.affirmation input{font-style:italic;}
+  .affirm-scaffold{font-size:11.5px; color:var(--ink-soft); padding:2px 1px 6px; margin-bottom:6px; line-height:1.5;}
+  .affirm-scaffold b{color:var(--ink-soft); font-weight:700;}
 
   hr.divider{border:none; border-top:1px solid var(--hairline); margin:28px 0 22px;}
 
-  .save-bar{margin-top:6px;}
-  button.save{width:100%; padding:13px; border:none; border-radius:9px; font-family:'Mukta',system-ui,sans-serif; font-weight:600; font-size:14px; cursor:pointer; color:var(--on-accent);}
-  button.save:active{transform:scale(0.98);}
-  button.save.morning-btn{background:var(--moss-deep);}
-  button.save.evening-btn{background:var(--plum-deep);}
-  .saved-flag{text-align:center; font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:11px; color:var(--moss-deep); margin-top:8px; opacity:0; transition:opacity .2s ease;}
+  /* Autosave is the mechanism; these are the ritual full stop. Quiet, right-aligned. */
+  .save-bar{margin-top:16px; text-align:right;}
+  button.save{display:inline-block; min-height:38px; padding:8px 2px 8px 16px; background:none; border:none; font-family:'Mukta',system-ui,sans-serif; font-weight:600; font-size:13px; letter-spacing:0.02em; color:var(--ink-soft); cursor:pointer;}
+  button.save:active{opacity:0.55;}
+  .saved-flag{text-align:right; font-family:'IBM Plex Mono','SFMono-Regular',ui-monospace,Menlo,monospace; font-size:10.5px; color:var(--ink-soft); margin-top:4px; opacity:0; transition:opacity .2s ease;}
   .saved-flag.show{opacity:1;}
 
   /* Browse list */
@@ -145,10 +141,11 @@
   .entry-card{position:relative;}
   .card-del{position:absolute; top:10px; right:10px; appearance:none; border:1px solid var(--hairline); background:var(--paper); border-radius:6px; width:28px; height:28px; font-size:13px; line-height:1; color:var(--ink-soft); cursor:pointer;}
 
-  /* ---- morning / evening as distinct panels, not just accent colours ---- */
-  .block{border-radius:12px; padding:16px 15px 14px; margin-bottom:6px; border:1px solid transparent;}
-  .block.morning-block{background:var(--block-morning); border-color:var(--block-morning-edge);}
-  .block.evening-block{background:var(--block-evening); border-color:var(--block-evening-edge);}
+  /* ---- morning / evening are structural wrappers only. Foolscap removes the
+         panel fills and edges; with time-aware sections (Change 4) only one
+         shows at a time, so a tint distinguishing two simultaneous panels no
+         longer solves anything. ---- */
+  .block{padding:0; margin-bottom:6px;}
   .block .couplet{background:transparent; border-left-width:3px; padding-left:13px; border-radius:0;}
   .block .section-tag{margin-bottom:12px;}
 
@@ -233,21 +230,21 @@
         <div class="couplet" id="coupletMorning"></div>
 
         <p class="prompt">I am grateful for&hellip;</p>
-        <div class="field"><div class="g-row"><span class="num">1</span><input type="text" id="g1" maxlength="140" placeholder="A person, moment, or thing"></div></div>
-        <div class="field"><div class="g-row"><span class="num">2</span><input type="text" id="g2" maxlength="140" placeholder="A person, moment, or thing"></div></div>
-        <div class="field"><div class="g-row"><span class="num">3</span><input type="text" id="g3" maxlength="140" placeholder="A person, moment, or thing"></div></div>
+        <div class="field"><input type="text" id="g1" maxlength="140" placeholder="A person, moment, or thing"></div>
+        <div class="field"><input type="text" id="g2" maxlength="140" placeholder="A person, moment, or thing"></div>
+        <div class="field"><input type="text" id="g3" maxlength="140" placeholder="A person, moment, or thing"></div>
 
         <p class="prompt" style="margin-top:20px;">What would make today great?</p>
-        <div class="field"><div class="g-row"><span class="num">1</span><input type="text" id="i1" maxlength="140" placeholder="One concrete, actionable thing"></div></div>
-        <div class="field"><div class="g-row"><span class="num">2</span><input type="text" id="i2" maxlength="140" placeholder="One concrete, actionable thing"></div></div>
-        <div class="field"><div class="g-row"><span class="num">3</span><input type="text" id="i3" maxlength="140" placeholder="One concrete, actionable thing"></div></div>
+        <div class="field"><input type="text" id="i1" maxlength="140" placeholder="One concrete, actionable thing"></div>
+        <div class="field"><input type="text" id="i2" maxlength="140" placeholder="One concrete, actionable thing"></div>
+        <div class="field"><input type="text" id="i3" maxlength="140" placeholder="One concrete, actionable thing"></div>
 
         <p class="prompt" style="margin-top:20px;">Daily affirmation</p>
         <div class="affirm-scaffold" id="affirmScaffold"></div>
         <div class="field affirmation"><input type="text" id="affirm" maxlength="140" placeholder="I am&hellip;"></div>
 
         <div class="save-bar">
-          <button class="save morning-btn" id="saveMorning">Save morning entry</button>
+          <button class="save morning-btn" id="saveMorning">Close the morning</button>
           <p class="saved-flag" id="flagMorning">Saved.</p>
           <p class="autosave-note">Autosaves as you type.</p>
         </div>
@@ -260,15 +257,15 @@
         <div class="couplet eve" id="coupletEvening"></div>
 
         <p class="prompt">3 amazing things that happened today&hellip;</p>
-        <div class="field"><div class="g-row"><span class="num">1</span><input type="text" id="h1" maxlength="140" placeholder="A highlight"></div></div>
-        <div class="field"><div class="g-row"><span class="num">2</span><input type="text" id="h2" maxlength="140" placeholder="A highlight"></div></div>
-        <div class="field"><div class="g-row"><span class="num">3</span><input type="text" id="h3" maxlength="140" placeholder="A highlight"></div></div>
+        <div class="field"><input type="text" id="h1" maxlength="140" placeholder="A highlight"></div>
+        <div class="field"><input type="text" id="h2" maxlength="140" placeholder="A highlight"></div>
+        <div class="field"><input type="text" id="h3" maxlength="140" placeholder="A highlight"></div>
 
         <p class="prompt" style="margin-top:20px;">How could today have been better?</p>
         <div class="field evening"><textarea id="improve" rows="3" maxlength="280" placeholder="One honest reflection"></textarea></div>
 
         <div class="save-bar">
-          <button class="save evening-btn" id="saveEvening">Save evening entry</button>
+          <button class="save evening-btn" id="saveEvening">Close the day</button>
           <p class="saved-flag" id="flagEvening">Saved.</p>
           <p class="autosave-note">Autosaves as you type.</p>
         </div>
